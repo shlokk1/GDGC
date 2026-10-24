@@ -70,6 +70,58 @@ Before completing the task, verify:
 - [ ] No extraneous file system or network side-effects occurred.
 """
 
+    is_k8s = any(term in task_desc.lower() for term in ["k8s", "helm", "kubernetes"])
+
+    if is_k8s:
+        readable_title = "Audit Kubernetes Helm Charts And Manifest"
+        purpose_md = "Analyze Kubernetes Helm charts and manifest YAMLs to identify security misconfigurations, security risks, privilege escalation paths, and resource quota issues. Provide clear, actionable recommendations with explanations."
+        when_to_use_md = """- Reviewing Helm charts before deployment
+- Auditing Kubernetes manifests for security and compliance
+- Identifying risky configurations in existing clusters
+- Validating resource limits and quotas
+- Performing pre-deployment security checks"""
+        capabilities_md = """1. Parse and analyze Helm charts and YAML manifests.
+2. Identify security misconfigurations and risky patterns.
+3. Detect privilege escalation vectors.
+4. Check resource requests, limits, and quota configurations.
+5. Provide clear explanations and actionable remediation steps.
+6. Follow Kubernetes and CNCF security best practices."""
+        workflow_md = """1. **Understand the input**
+   - Accept Helm chart files, values.yaml files, or Kubernetes manifest YAML files.
+   - Identify the file type and relevant components.
+
+2. **Inspect & Audit YAML Manifests**
+   - Scan securityContext for runAsNonRoot, privileged, and allowPrivilegeEscalation.
+   - Verify CPU and Memory requests and limits are defined.
+
+3. **Report & Remediate**
+   - Flag risky patterns with clear explanations.
+   - Follow Kubernetes and CNCF security best practices."""
+    else:
+        purpose_md = f"Analyze and execute: {task_desc.strip()} with deterministic verification and standardized safety guards."
+        when_to_use_md = f"""- Automating tasks related to {category.lower()}
+- Auditing and verifying configurations against standards
+- Identifying risky patterns in existing code or infrastructure
+- Validating resource limits and execution constraints
+- Performing pre-deployment security and quality checks"""
+        capabilities_md = f"""1. Parse and analyze requirements for {category.lower()}.
+2. Identify security misconfigurations and risky patterns.
+3. Detect boundary and privilege escalation issues.
+4. Check resource requests, limits, and quota configurations.
+5. Provide clear explanations and actionable remediation steps.
+6. Follow standard industry and safety best practices."""
+        workflow_md = """1. **Understand the input**
+   - Ingest user input and inspect target artifacts.
+   - Identify the file type and relevant components.
+
+2. **Plan & Validation**
+   - Formulate a stepwise execution plan.
+   - Verify that all referenced paths, APIs, or schema exist and are accessible.
+
+3. **Execution & Synthesis**
+   - Perform primary computation or transformation matching the category.
+   - Maintain safety invariants and avoid unauthorized side effects."""
+
     content = f"""---
 name: {skill_slug}
 description: Automatically {task_desc.strip()[:120].lower()} with standardized verification and safety guards.
@@ -84,29 +136,17 @@ tags:
 
 # {readable_title}
 
-## Purpose & Overview
-This skill instructs an AI agent to execute: **{task_desc.strip()}**.
-It establishes a structured procedure, handles boundary conditions, enforces constraints, and guarantees predictable, high-fidelity results.
+## Purpose
+{purpose_md}
 
-## Operational Workflow
-Follow these sequential phases when executing this skill:
+## When to Use This Skill
+{when_to_use_md}
 
-1. **Context & Requirement Analysis**
-   - Ingest user input and inspect target artifacts.
-   - Parse all boundary constraints and environment prerequisites.
-   - Clarify any ambiguous instructions before executing actions.
+## Key Capabilities
+{capabilities_md}
 
-2. **Plan & Validation**
-   - Formulate a stepwise execution plan.
-   - Verify that all referenced paths, APIs, or schema exist and are accessible.
-
-3. **Execution & Synthesis**
-   - Perform primary computation or transformation matching the category: `{category}`.
-   - Maintain safety invariants and avoid unauthorized side effects.
-
-4. **Review & Output Formatting**
-   - Format output according to the specified **{output_style}** style guideline.
-   - Cross-check against the Quality & Verification Checklist.
+## Workflow
+{workflow_md}
 
 ## Strict Rules & Constraints
 {user_constraints_md}

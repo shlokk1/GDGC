@@ -25,12 +25,20 @@ from frontend.components import (
     render_stat_box,
     render_check_item,
     render_test_item,
+    render_skill_rendered_preview,
+)
+from frontend.icons import (
+    icon_layers,
+    icon_book_open,
+    icon_flask,
+    icon_check,
+    icon_folder
 )
 
 # Page configuration
 st.set_page_config(
     page_title="SkillForge — AI Agent Skill Studio",
-    page_icon="⚡",
+    page_icon="❖",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -42,22 +50,37 @@ st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
 # Session State Management
 # -----------------------------------------------------------------------------
 def init_session_state():
+    default_task = "Audit Kubernetes Helm charts and manifest YAMLs for security misconfigurations, privilege escalation, and resource quota leaks."
+    k8s_default = generate_mock_skill(
+        task_desc=default_task,
+        category="Software Development",
+        constraints="Flag runAsRoot permissions.\nCheck CPU and Memory limits.",
+        output_style="Detailed",
+        include_checklist=True
+    )
     defaults = {
         "current_page": "Create Skill",
-        "skill_name": None,
-        "skill_content": "",
-        "task_desc_input": "",
-        "original_task_desc": "",
+        "skill_name": "k8s-helm-audit",
+        "skill_content": k8s_default["content"],
+        "task_desc_input": default_task,
+        "original_task_desc": default_task,
         "category_input": "Software Development",
-        "constraints_input": "",
-        "output_style_input": "Balanced",
+        "constraints_input": "Flag runAsRoot permissions.\nCheck CPU and Memory limits.",
+        "output_style_input": "Detailed",
         "checklist_input": True,
-        "has_generated": False,
-        "validation_result": None,
-        "test_result": None,
-        "last_updated": None,
-        "export_folder_name": "",
-        "skills_history": [],
+        "has_generated": True,
+        "validation_result": validate_skill(k8s_default["content"]),
+        "test_result": run_skill_tests(k8s_default["content"], default_task),
+        "last_updated": "11:57 AM",
+        "export_folder_name": "k8s-helm-audit",
+        "skills_history": [
+            {
+                "name": "k8s-helm-audit",
+                "category": "Software Development",
+                "content": k8s_default["content"],
+                "created_at": "Today, 11:57 AM"
+            }
+        ],
         "ollama_endpoint": "http://localhost:11434",
         "active_model": "qwen2.5:7b",
         "selected_model": "qwen2.5:7b",
@@ -65,7 +88,8 @@ def init_session_state():
         "ollama_connected": False,
         "use_local_model": True,
         "ollama_status_message": "",
-        "ollama_checked": False
+        "ollama_checked": False,
+        "code_edit_mode": False
     }
     for key, val in defaults.items():
         if key not in st.session_state:
@@ -100,7 +124,33 @@ render_sidebar()
 # PAGE 1: CREATE SKILL (Primary Workspace)
 # -----------------------------------------------------------------------------
 def page_create_skill():
-    render_hero()
+    folder_svg = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>'
+    info_svg = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>'
+    more_svg = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>'
+    book_svg = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>'
+
+    # Top breadcrumb and title matching Image 1
+    st.markdown(f"""
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; margin-top: -10px;">
+        <div style="display: flex; align-items: center; gap: 8px; font-size: 0.88rem; color: #94a3b8;">
+            <span style="display: flex; align-items: center;">{folder_svg}</span>
+            <span>Default Project</span>
+            <span style="color: #64748b;">›</span>
+            <span style="color: #f1f5f9; font-weight: 600;">{st.session_state.skill_name or 'k8s-helm-audit'}</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <span class="sf-pill sf-pill-purple-outline" style="display: inline-flex; align-items: center; gap: 6px;">
+                <span style="display: flex; align-items: center;">{info_svg}</span>
+                <span>Demo Mode</span>
+            </span>
+            <span style="color: #94a3b8; cursor: pointer; display: flex; align-items: center;">{more_svg}</span>
+        </div>
+    </div>
+    <div style="margin-bottom: 20px;">
+        <h1 style="font-size: 1.85rem; font-weight: 800; color: #ffffff; margin: 0 0 6px 0; letter-spacing: -0.02em;">Create Your AI Skill</h1>
+        <p style="font-size: 0.9rem; color: #94a3b8; margin: 0;">Describe your idea and transform it into a structured, reusable AI agent skill.</p>
+    </div>
+    """, unsafe_allow_html=True)
 
     # Step progress derivation
     step = 1
@@ -113,55 +163,65 @@ def page_create_skill():
     if st.session_state.validation_result and st.session_state.validation_result.get("is_valid") and st.session_state.test_result:
         step = 5
 
-    render_stepper(step)
-
-    # Main split layout: Left form (40%), Right workspace (60%) if generated, or centered card
-    left_col, right_col = st.columns([5, 7] if st.session_state.has_generated else [7, 5], gap="large")
+    # Main split layout: Left form (48%), Right workspace (52%)
+    left_col, right_col = st.columns([5, 6], gap="large")
 
     with left_col:
-        st.markdown("""
-        <div class="sf-card">
-            <div class="sf-card-header">
-                <h3 class="sf-card-title">1. Define Skill Requirements</h3>
-                <span class="sf-pill sf-pill-indigo">Step 1</span>
+        # Template expander trigger
+        with st.expander("Templates & Presets", expanded=False):
+            p_cols = st.columns(3)
+            with p_cols[0]:
+                if st.button("Python Review", use_container_width=True):
+                    st.session_state.task_desc_input = "Review Python code for bugs, security vulnerabilities, and code smells, and suggest verified fixes without modifying files."
+                    st.session_state.category_input = "Software Development"
+                    st.session_state.constraints_input = "Never modify files in place.\nAdhere to PEP 8 standards.\nInclude line numbers for all issues found."
+                    st.rerun()
+            with p_cols[1]:
+                if st.button("K8s Helm Audit", use_container_width=True):
+                    st.session_state.task_desc_input = "Audit Kubernetes Helm charts and manifest YAMLs for security misconfigurations, privilege escalation, and resource quota leaks."
+                    st.session_state.category_input = "Software Development"
+                    st.session_state.constraints_input = "Flag runAsRoot permissions.\nCheck CPU and Memory limits."
+                    st.rerun()
+            with p_cols[2]:
+                if st.button("OpenAPI Spec", use_container_width=True):
+                    st.session_state.task_desc_input = "Generate comprehensive OpenAPI 3.1 specification documentation from FastAPI endpoint code including schema definitions."
+                    st.session_state.category_input = "Writing & Documentation"
+                    st.session_state.constraints_input = "Include detailed error response codes (400, 401, 404, 500).\nInclude realistic example JSON payloads."
+                    st.rerun()
+
+        # Skill Requirements Card Header
+        st.markdown(f"""
+        <div style="background: rgba(17, 24, 39, 0.72); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 14px 14px 0 0; padding: 18px 20px 10px; margin-bottom: -1px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div style="width: 26px; height: 26px; border-radius: 50%; background: #6366f1; color: #ffffff; font-weight: 700; font-size: 0.85rem; display: flex; align-items: center; justify-content: center;">1</div>
+                    <div>
+                        <h3 style="font-size: 1.05rem; font-weight: 700; color: #ffffff; margin: 0;">Skill Requirements</h3>
+                        <p style="font-size: 0.8rem; color: #94a3b8; margin: 2px 0 0 0;">Provide the details for your AI agent skill.</p>
+                    </div>
+                </div>
+                <div style="color: #818cf8; font-size: 0.82rem; font-weight: 600; display: flex; align-items: center; gap: 6px;">
+                    <span style="display: flex; align-items: center;">{book_svg}</span>
+                    <span>Use a template</span>
+                </div>
             </div>
-            <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 16px;">
-                Specify the exact capability you want to instill in an autonomous AI agent.
-            </p>
         </div>
         """, unsafe_allow_html=True)
 
-        # Quick preset selector
-        st.markdown("<p style='font-size: 0.78rem; font-weight: 700; color: #a5b4fc; margin-bottom: 6px;'>💡 Quick Presets (Click to load):</p>", unsafe_allow_html=True)
-        preset_cols = st.columns(3)
-        with preset_cols[0]:
-            if st.button("🐍 Python Code Review", use_container_width=True):
-                st.session_state.task_desc_input = "Review Python code for bugs, security vulnerabilities, and code smells, and suggest verified fixes without modifying files."
-                st.session_state.category_input = "Software Development"
-                st.session_state.constraints_input = "Never modify files in place.\nAdhere to PEP 8 standards.\nInclude line numbers for all issues found."
-                st.rerun()
-        with preset_cols[1]:
-            if st.button("☸️ K8s Helm Auditor", use_container_width=True):
-                st.session_state.task_desc_input = "Audit Kubernetes Helm charts and manifest YAMLs for security misconfigurations, privilege escalation, and resource quota leaks."
-                st.session_state.category_input = "Software Development"
-                st.session_state.constraints_input = "Flag runAsRoot permissions.\nCheck CPU and Memory limits.\nFollow CIS benchmark recommendations."
-                st.rerun()
-        with preset_cols[2]:
-            if st.button("📝 OpenAPI Doc Writer", use_container_width=True):
-                st.session_state.task_desc_input = "Generate comprehensive OpenAPI 3.1 specification documentation from FastAPI endpoint code including schema definitions."
-                st.session_state.category_input = "Writing & Documentation"
-                st.session_state.constraints_input = "Include detailed error response codes (400, 401, 404, 500).\nInclude realistic example JSON payloads."
-                st.rerun()
+        # Skill Creation Form Container
+        st.markdown("""
+        <div style="background: rgba(17, 24, 39, 0.72); border: 1px solid rgba(255, 255, 255, 0.08); border-top: none; border-radius: 0 0 14px 14px; padding: 12px 20px 20px; margin-bottom: 16px;">
+        """, unsafe_allow_html=True)
 
-        # Skill Creation Form
         task_desc = st.text_area(
             "Task Description *",
             value=st.session_state.task_desc_input,
-            placeholder="e.g., Create an AI skill that reviews Python code, finds bugs and security issues, and suggests fixes without modifying files...",
-            height=130,
+            placeholder="e.g., Audit Kubernetes Helm charts and manifest YAMLs for security misconfigurations...",
+            height=125,
             help="Describe the exact agent task in natural language."
         )
         st.session_state.task_desc_input = task_desc
+        st.markdown(f"<div style='text-align: right; font-size: 0.75rem; color: #64748b; margin-top: -8px; margin-bottom: 12px;'>{len(task_desc)}/2000</div>", unsafe_allow_html=True)
 
         category_options = [
             "Software Development",
@@ -172,39 +232,47 @@ def page_create_skill():
             "Other"
         ]
         cat_idx = category_options.index(st.session_state.category_input) if st.session_state.category_input in category_options else 0
-        category = st.selectbox("Skill Category", options=category_options, index=cat_idx)
-        st.session_state.category_input = category
+
+        style_cols = st.columns(2)
+        with style_cols[0]:
+            category = st.selectbox(
+                "Skill Category",
+                options=category_options,
+                index=cat_idx,
+                format_func=lambda x: f"</> {x}" if x == "Software Development" else x
+            )
+            st.session_state.category_input = category
+        with style_cols[1]:
+            output_style = st.selectbox(
+                "Output Style",
+                options=["Detailed", "Balanced", "Concise"],
+                index=["Detailed", "Balanced", "Concise"].index(st.session_state.output_style_input) if st.session_state.output_style_input in ["Detailed", "Balanced", "Concise"] else 0,
+                format_func=lambda x: x
+            )
+            st.session_state.output_style_input = output_style
 
         constraints = st.text_area(
             "Rules and Constraints (Optional)",
             value=st.session_state.constraints_input,
-            placeholder="e.g., Never modify user files directly\nOnly return read-only unified diffs\nProvide deterministic explanations",
+            placeholder="e.g., Flag runAsRoot permissions.\nCheck CPU and Memory limits.",
             height=90,
             help="Explicit boundary conditions, security rules, or execution restrictions."
         )
         st.session_state.constraints_input = constraints
+        st.markdown(f"<div style='text-align: right; font-size: 0.75rem; color: #64748b; margin-top: -8px; margin-bottom: 12px;'>{len(constraints)}/1000</div>", unsafe_allow_html=True)
 
-        style_cols = st.columns(2)
-        with style_cols[0]:
-            output_style = st.selectbox(
-                "Output Style",
-                options=["Balanced", "Detailed", "Concise"],
-                index=["Balanced", "Detailed", "Concise"].index(st.session_state.output_style_input)
-            )
-            st.session_state.output_style_input = output_style
-        with style_cols[1]:
-            st.markdown("<div style='height: 28px;'></div>", unsafe_allow_html=True)
-            include_checklist = st.checkbox(
-                "Include Quality Checklist",
-                value=st.session_state.checklist_input
-            )
-            st.session_state.checklist_input = include_checklist
+        include_checklist = st.checkbox(
+            "Include Quality Checklist",
+            value=st.session_state.checklist_input,
+            help="Add a verification checklist to the generated skill."
+        )
+        st.markdown("<p style='font-size: 0.78rem; color: #64748b; margin-top: -12px; margin-left: 26px; margin-bottom: 16px;'>Add a verification checklist to the generated skill.</p>", unsafe_allow_html=True)
+        st.session_state.checklist_input = include_checklist
 
-        # Generation CTA
-        st.markdown("<div style='margin-top: 14px;'></div>", unsafe_allow_html=True)
-        if st.button("✨ Generate Agent Skill", type="primary", use_container_width=True):
+        # Generation CTA Button (Clean normal icon, no AI sparkles)
+        if st.button("Generate Skill →", type="primary", use_container_width=True):
             if not task_desc or not task_desc.strip():
-                st.error("⚠️ Task Description is required. Please provide a description of the skill.")
+                st.error("Task Description is required. Please provide a description of the skill.")
             else:
                 with st.spinner("Synthesizing standard SKILL.md specification..."):
                     try:
@@ -249,12 +317,10 @@ def page_create_skill():
                     st.session_state.has_generated = True
                     st.session_state.export_folder_name = result["name"]
                     
-                    # Rule 10: Generation resets previous validation and test results
                     st.session_state.validation_result = None
                     st.session_state.test_result = None
                     st.session_state.last_updated = datetime.datetime.now().strftime("%H:%M:%S")
 
-                    # Add to session history if not already present
                     exists = any(item["name"] == result["name"] for item in st.session_state.skills_history)
                     if not exists:
                         st.session_state.skills_history.append({
@@ -266,21 +332,18 @@ def page_create_skill():
                     st.success(f"Skill `{result['name']}` generated successfully!")
                     st.rerun()
 
-        # Explain which generation engine is active.
-        st.markdown("""
-        <div style="margin-top: 16px; padding: 10px 14px; background: rgba(6, 182, 212, 0.08); border: 1px solid rgba(6, 182, 212, 0.2); border-radius: 8px;">
-            <p style="font-size: 0.76rem; color: #38bdf8; margin: 0; line-height: 1.4;">
-                ℹ️ <strong>Local generation:</strong> Skills are generated by your selected Ollama model and validated before they are added to the workspace. No cloud API is used.
-            </p>
-        </div>
-        """, unsafe_allow_html=True)
+        # Stepper rendered at the bottom of the card/column (Image 1)
+        render_stepper(step)
+
+        st.markdown("</div>", unsafe_allow_html=True)
 
     # Right column: Results Workspace or Empty State Guide
     with right_col:
         if not st.session_state.has_generated:
-            st.markdown("""
+            layers_svg = icon_layers(44, "#6366f1")
+            st.markdown(f"""
             <div class="sf-card" style="text-align: center; padding: 48px 24px;">
-                <div style="font-size: 3.5rem; margin-bottom: 12px;">⚡</div>
+                <div style="display: flex; justify-content: center; margin-bottom: 16px;">{layers_svg}</div>
                 <h3 style="font-size: 1.3rem; font-weight: 700; color: #f8fafc; margin-bottom: 8px;">Agent Workspace Idle</h3>
                 <p style="font-size: 0.88rem; color: #94a3b8; max-width: 420px; margin: 0 auto 20px;">
                     Enter a task description on the left or click one of the quick presets to synthesize your first standardized AI agent skill package.
@@ -293,18 +356,23 @@ def page_create_skill():
             </div>
             """, unsafe_allow_html=True)
         else:
-            # Workspace Tabs (PRD Section 9.3)
+            # Workspace Tabs — Pro Max Redesign with Vector SVG Icons
             tabs = st.tabs([
-                "📝 Skill Editor",
-                "🔍 Validation",
-                "🧪 Testing Lab",
-                "📦 Export ZIP"
+                "Preview",
+                "Code",
+                "Validation",
+                "Tests"
             ])
 
-            # TAB 1: SKILL EDITOR
+            # TAB 1: PREVIEW (Image 2 Pro Max Rendered View)
             with tabs[0]:
+                with st.container(height=520, border=False):
+                    st.markdown(render_skill_rendered_preview(st.session_state.skill_content), unsafe_allow_html=True)
+
+            # TAB 2: CODE & EDIT
+            with tabs[1]:
                 st.markdown(f"""
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; margin-top: 6px;">
                     <div>
                         <span style="font-size: 0.78rem; font-weight: 700; color: #a5b4fc; text-transform: uppercase;">Active File:</span>
                         <span style="font-family: monospace; font-size: 0.95rem; font-weight: 700; color: #ffffff;">{st.session_state.skill_name}/SKILL.md</span>
@@ -313,45 +381,80 @@ def page_create_skill():
                 </div>
                 """, unsafe_allow_html=True)
 
-                # Editable Text Area
-                edited_content = st.text_area(
-                    "SKILL.md Content",
-                    value=st.session_state.skill_content,
-                    height=380,
-                    label_visibility="collapsed",
-                    key="editor_textarea"
-                )
+                col_top1, col_top2 = st.columns([6, 3])
+                with col_top2:
+                    edit_mode = st.toggle("Edit Mode", value=st.session_state.get("code_edit_mode", False), key="toggle_edit_mode")
+                    st.session_state.code_edit_mode = edit_mode
 
-                # Actions bar
-                act_cols = st.columns([3, 3, 3])
-                with act_cols[0]:
-                    if st.button("💾 Save Edits", type="primary", use_container_width=True):
-                        st.session_state.skill_content = edited_content
-                        # Rule 10: Saving edits invalidates previous validation and test results
-                        st.session_state.validation_result = None
-                        st.session_state.test_result = None
-                        st.session_state.last_updated = datetime.datetime.now().strftime("%H:%M:%S")
-                        st.toast("Edits saved! Validation and test caches reset.", icon="✅")
-                        st.rerun()
-                with act_cols[1]:
-                    if st.button("🔍 Run Validation", use_container_width=True):
-                        st.session_state.skill_content = edited_content
-                        st.session_state.validation_result = validate_skill(edited_content)
-                        st.toast("Validation complete!", icon="🔍")
-                        st.rerun()
-                with act_cols[2]:
-                    if st.button("🧪 Run Behavioral Tests", use_container_width=True):
-                        st.session_state.skill_content = edited_content
-                        st.session_state.test_result = run_skill_tests(edited_content, st.session_state.task_desc_input)
-                        st.toast("Behavioral tests complete!", icon="🧪")
-                        st.rerun()
+                if edit_mode:
+                    edited_content = st.text_area(
+                        "SKILL.md Content",
+                        value=st.session_state.skill_content,
+                        height=420,
+                        label_visibility="collapsed",
+                        key="editor_textarea"
+                    )
 
-                # Rendered Markdown Preview
-                with st.expander("👁️ Rendered Markdown Preview", expanded=False):
-                    st.markdown(st.session_state.skill_content)
+                    # Actions bar
+                    act_cols = st.columns([3, 3, 3])
+                    with act_cols[0]:
+                        if st.button("Save Edits", type="primary", use_container_width=True):
+                            st.session_state.skill_content = edited_content
+                            st.session_state.validation_result = None
+                            st.session_state.test_result = None
+                            st.session_state.last_updated = datetime.datetime.now().strftime("%H:%M:%S")
+                            st.toast("Edits saved! Validation and test caches reset.")
+                            st.rerun()
+                    with act_cols[1]:
+                        if st.button("Run Validation", use_container_width=True):
+                            st.session_state.skill_content = edited_content
+                            st.session_state.validation_result = validate_skill(edited_content)
+                            st.toast("Validation complete!")
+                            st.rerun()
+                    with act_cols[2]:
+                        if st.button("Run Behavioral Tests", use_container_width=True):
+                            st.session_state.skill_content = edited_content
+                            st.session_state.test_result = run_skill_tests(edited_content, st.session_state.task_desc_input)
+                            st.toast("Behavioral tests complete!")
+                            st.rerun()
+                else:
+                    with st.container(height=520, border=False):
+                        st.code(st.session_state.skill_content, language="markdown", line_numbers=True)
 
-            # TAB 2: VALIDATION
-            with tabs[1]:
+                # Export ZIP Bundle
+                with st.expander("Export Skill ZIP Bundle", expanded=False):
+                    folder_input = st.text_input(
+                        "Folder / Package Name",
+                        value=st.session_state.export_folder_name or (st.session_state.skill_name or "my-agent-skill"),
+                        help="Customizable slug for folder and ZIP archive."
+                    )
+                    safe_folder = sanitize_folder_name(folder_input)
+                    st.session_state.export_folder_name = safe_folder
+
+                    if st.session_state.validation_result and not st.session_state.validation_result.get("is_valid", True):
+                        st.warning("Warning: The current skill has failing structural validation checks. You may still download, but address errors before deploying to agents.")
+
+                    st.markdown("<p style='font-size: 0.78rem; font-weight: 700; color: #a5b4fc; text-transform: uppercase;'>Archive Structure Preview:</p>", unsafe_allow_html=True)
+                    st.markdown(f"<div class='sf-tree-box'>{generate_file_tree_view(safe_folder, True)}</div>", unsafe_allow_html=True)
+
+                    zip_bytes = create_skill_zip(
+                        folder_name=safe_folder,
+                        skill_content=st.session_state.skill_content,
+                        include_metadata_manifest=True
+                    )
+
+                    st.markdown("<div style='margin-top: 14px;'></div>", unsafe_allow_html=True)
+                    st.download_button(
+                        label=f"Download {safe_folder}.zip ({len(zip_bytes)} bytes)",
+                        data=zip_bytes,
+                        file_name=f"{safe_folder}.zip",
+                        mime="application/zip",
+                        type="primary",
+                        use_container_width=True
+                    )
+
+            # TAB 3: VALIDATION
+            with tabs[2]:
                 # Automatically run validation if not yet run
                 if st.session_state.validation_result is None:
                     st.session_state.validation_result = validate_skill(st.session_state.skill_content)
@@ -382,12 +485,12 @@ def page_create_skill():
                 for check in val.get("checks", []):
                     st.markdown(render_check_item(check), unsafe_allow_html=True)
 
-                if st.button("🔄 Re-Validate Current Content", use_container_width=True):
+                if st.button("Re-Validate Current Content", use_container_width=True):
                     st.session_state.validation_result = validate_skill(st.session_state.skill_content)
                     st.rerun()
 
-            # TAB 3: TESTING LAB
-            with tabs[2]:
+            # TAB 4: TESTING LAB
+            with tabs[3]:
                 if st.session_state.test_result is None:
                     st.session_state.test_result = run_skill_tests(st.session_state.skill_content, st.session_state.task_desc_input)
 
@@ -410,7 +513,7 @@ def page_create_skill():
                 st.markdown("""
                 <div style="padding: 8px 12px; background: rgba(99, 102, 241, 0.08); border: 1px solid rgba(99, 102, 241, 0.2); border-radius: 8px; margin-bottom: 14px;">
                     <span style="font-size: 0.78rem; color: #a5b4fc;">
-                        ℹ️ <strong>Demo Test Suite:</strong> These are illustrative behavioral evaluation scenarios. No external LLM was charged or executed.
+                        <strong>Demo Test Suite:</strong> Standard behavioral evaluation scenarios executing deterministically.
                     </span>
                 </div>
                 """, unsafe_allow_html=True)
@@ -422,64 +525,17 @@ def page_create_skill():
                 st.markdown("<div style='margin-top: 14px;'></div>", unsafe_allow_html=True)
                 t_act_cols = st.columns(2)
                 with t_act_cols[0]:
-                    if st.button("⚡ Self-Improve Skill", type="primary", use_container_width=True, help="Automatically address test observations and upgrade SKILL.md"):
+                    if st.button("Self-Improve Skill", type="primary", use_container_width=True, help="Automatically address test observations and upgrade SKILL.md"):
                         improved = improve_skill_content(st.session_state.skill_content, [t for t in test_res.get("tests", []) if t["status"] != "PASSED"])
                         st.session_state.skill_content = improved
                         st.session_state.validation_result = validate_skill(improved)
                         st.session_state.test_result = run_skill_tests(improved, st.session_state.task_desc_input)
-                        st.toast("Skill improved and re-tested!", icon="🚀")
+                        st.toast("Skill improved and re-tested!")
                         st.rerun()
                 with t_act_cols[1]:
-                    if st.button("🔄 Re-run All Tests", use_container_width=True):
+                    if st.button("Re-run All Tests", use_container_width=True):
                         st.session_state.test_result = run_skill_tests(st.session_state.skill_content, st.session_state.task_desc_input)
                         st.rerun()
-
-            # TAB 4: EXPORT ZIP
-            with tabs[3]:
-                st.markdown("""
-                <div class="sf-card">
-                    <div class="sf-card-header">
-                        <h4 class="sf-card-title">Package &amp; Export Skill Bundle</h4>
-                        <span class="sf-pill sf-pill-cyan">Standard Bundle</span>
-                    </div>
-                    <p style="font-size: 0.85rem; color: #94a3b8; margin: 0;">
-                        Generates an in-memory ZIP package containing standard-compliant <code>SKILL.md</code> and package manifest.
-                    </p>
-                </div>
-                """, unsafe_allow_html=True)
-
-                folder_input = st.text_input(
-                    "Folder / Package Name",
-                    value=st.session_state.export_folder_name or (st.session_state.skill_name or "my-agent-skill"),
-                    help="Customizable slug for folder and ZIP archive."
-                )
-                safe_folder = sanitize_folder_name(folder_input)
-                st.session_state.export_folder_name = safe_folder
-
-                # Validation warning if invalid
-                if st.session_state.validation_result and not st.session_state.validation_result.get("is_valid", True):
-                    st.warning("⚠️ Warning: The current skill has failing structural validation checks. You may still download, but address errors before deploying to agents.")
-
-                # Package Tree Preview
-                st.markdown("<p style='font-size: 0.78rem; font-weight: 700; color: #a5b4fc; text-transform: uppercase;'>Archive Structure Preview:</p>", unsafe_allow_html=True)
-                st.markdown(f"<div class='sf-tree-box'>{generate_file_tree_view(safe_folder, True)}</div>", unsafe_allow_html=True)
-
-                # ZIP generation in memory
-                zip_bytes = create_skill_zip(
-                    folder_name=safe_folder,
-                    skill_content=st.session_state.skill_content,
-                    include_metadata_manifest=True
-                )
-
-                st.markdown("<div style='margin-top: 16px;'></div>", unsafe_allow_html=True)
-                st.download_button(
-                    label=f"⬇️ Download {safe_folder}.zip ({len(zip_bytes)} bytes)",
-                    data=zip_bytes,
-                    file_name=f"{safe_folder}.zip",
-                    mime="application/zip",
-                    type="primary",
-                    use_container_width=True
-                )
 
 
 # -----------------------------------------------------------------------------
@@ -498,16 +554,17 @@ def page_my_skills():
 
     skills = st.session_state.skills_history
     if not skills and not st.session_state.skill_name:
-        st.markdown("""
+        book_svg = icon_book_open(40, "#6366f1")
+        st.markdown(f"""
         <div class="sf-card" style="text-align: center; padding: 40px;">
-            <div style="font-size: 3rem; margin-bottom: 8px;">📚</div>
+            <div style="display: flex; justify-content: center; margin-bottom: 14px;">{book_svg}</div>
             <h3 style="color: #f8fafc; font-size: 1.2rem;">No Skills Created Yet</h3>
             <p style="color: #94a3b8; font-size: 0.88rem; max-width: 400px; margin: 0 auto 16px;">
                 You haven't generated any agent skills in this session yet. Head over to Create Skill to get started.
             </p>
         </div>
         """, unsafe_allow_html=True)
-        if st.button("🚀 Go to Create Skill", type="primary"):
+        if st.button("Create Skill", type="primary"):
             st.session_state.current_page = "Create Skill"
             st.rerun()
         return
@@ -534,7 +591,7 @@ def page_my_skills():
 
         scol1, scol2, scol3 = st.columns([3, 3, 6])
         with scol1:
-            if st.button(f"📂 Open in Workspace", key=f"open_{idx}", use_container_width=True):
+            if st.button(f"Open in Workspace", key=f"open_{idx}", use_container_width=True):
                 st.session_state.skill_name = item["name"]
                 st.session_state.skill_content = item["content"]
                 st.session_state.has_generated = True
@@ -545,7 +602,7 @@ def page_my_skills():
         with scol2:
             zip_data = create_skill_zip(item["name"], item["content"])
             st.download_button(
-                label="⬇️ Download ZIP",
+                label="Download ZIP",
                 data=zip_data,
                 file_name=f"{item['name']}.zip",
                 mime="application/zip",
@@ -568,16 +625,17 @@ def page_testing_lab():
     """, unsafe_allow_html=True)
 
     if not st.session_state.has_generated or not st.session_state.skill_name:
-        st.markdown("""
+        flask_svg = icon_flask(40, "#6366f1")
+        st.markdown(f"""
         <div class="sf-card" style="text-align: center; padding: 40px;">
-            <div style="font-size: 3rem; margin-bottom: 8px;">🧪</div>
+            <div style="display: flex; justify-content: center; margin-bottom: 14px;">{flask_svg}</div>
             <h3 style="color: #f8fafc; font-size: 1.2rem;">No Active Skill Selected</h3>
             <p style="color: #94a3b8; font-size: 0.88rem; max-width: 400px; margin: 0 auto 16px;">
                 Please create or load a skill to run the behavioral evaluation suite.
             </p>
         </div>
         """, unsafe_allow_html=True)
-        if st.button("🚀 Create a Skill First", type="primary"):
+        if st.button("Create Skill First", type="primary"):
             st.session_state.current_page = "Create Skill"
             st.rerun()
         return
@@ -626,22 +684,22 @@ def page_testing_lab():
     st.markdown("<div style='margin-top: 20px;'></div>", unsafe_allow_html=True)
     cta_cols = st.columns([4, 4, 4])
     with cta_cols[0]:
-        if st.button("⬅️ Return to Workspace", use_container_width=True):
+        if st.button("Return to Workspace", use_container_width=True):
             st.session_state.current_page = "Create Skill"
             st.rerun()
     with cta_cols[1]:
-        if st.button("🔄 Re-evaluate All", use_container_width=True):
+        if st.button("Re-evaluate All", use_container_width=True):
             st.session_state.validation_result = validate_skill(st.session_state.skill_content)
             st.session_state.test_result = run_skill_tests(st.session_state.skill_content, st.session_state.task_desc_input)
-            st.toast("Evaluations refreshed!", icon="✅")
+            st.toast("Evaluations refreshed!")
             st.rerun()
     with cta_cols[2]:
-        if st.button("⚡ Self-Improve Skill", type="primary", use_container_width=True):
+        if st.button("Self-Improve Skill", type="primary", use_container_width=True):
             improved = improve_skill_content(st.session_state.skill_content, [t for t in test_res.get("tests", []) if t["status"] != "PASSED"])
             st.session_state.skill_content = improved
             st.session_state.validation_result = validate_skill(improved)
             st.session_state.test_result = run_skill_tests(improved, st.session_state.task_desc_input)
-            st.toast("Skill improved and verified!", icon="🚀")
+            st.toast("Skill improved and verified!")
             st.rerun()
 
 
@@ -681,7 +739,7 @@ def page_settings():
         st.session_state.ollama_status_message = ""
     st.session_state.ollama_endpoint = endpoint_input
 
-    if st.button("🔌 Detect & Connect to Ollama", use_container_width=True):
+    if st.button("Detect & Connect to Ollama", use_container_width=True):
         client = OllamaClient(endpoint=endpoint_input)
         result = client.check_connection()
         st.session_state.ollama_connected = result.get("connected", False)
