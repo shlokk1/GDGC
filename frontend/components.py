@@ -57,7 +57,7 @@ def render_sidebar():
         
         is_ollama_live = st.session_state.get("ollama_connected", False)
         status_color = "#10b981" if is_ollama_live else "#06b6d4"
-        status_text = "Live Ollama Connected" if is_ollama_live else "Local Deterministic Mode"
+        status_text = "Live Ollama Connected" if is_ollama_live else "Ollama Not Connected"
         
         st.markdown(f"""
         <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 12px 14px; margin-bottom: 16px;">
@@ -66,7 +66,7 @@ def render_sidebar():
                 <span style="font-size: 0.82rem; font-weight: 600; color: #f1f5f9;">{status_text}</span>
             </div>
             <div style="font-size: 0.75rem; color: #94a3b8; font-family: monospace;">Model: {st.session_state.get('active_model', 'qwen2.5:7b (Target)')}</div>
-            <div style="font-size: 0.75rem; color: #94a3b8; font-family: monospace;">Phase: Phase 1 (Frontend MVP)</div>
+            <div style="font-size: 0.75rem; color: #94a3b8; font-family: monospace;">Engine: {"Local Ollama" if st.session_state.get("use_local_model", True) else "Deterministic template"}</div>
         </div>
         """, unsafe_allow_html=True)
         

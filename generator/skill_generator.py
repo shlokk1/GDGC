@@ -1,23 +1,37 @@
 """
 SkillForge — Skill Generator Module
 Generates standardized Agent Skill specifications.
-Supports deterministic template generation (Phase 1) and seamless Ollama LLM integration (Phase 2).
+Supports:
+1. Live local AI inference via Ollama (qwen2.5:7b).
+2. Deterministic template generation (offline fallback).
 """
 
 import re
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
+from generator.ollama_client import OllamaClient
+from generator.prompts import SYSTEM_PROMPT, build_generation_prompt, build_improvement_prompt
 
 def slugify(text: str) -> str:
     """Converts a phrase into a clean kebab-case identifier."""
-    # Clean non-alphanumeric
     cleaned = re.sub(r"[^\w\s-]", "", text.lower())
-    # Replace whitespace and repeated dashes with single dash
     slug = re.sub(r"[-\s]+", "-", cleaned).strip("-")
-    # Take first 4-5 words or 35 chars max to keep slug neat
     parts = slug.split("-")
     if len(parts) > 5:
         slug = "-".join(parts[:5])
     return slug or "custom-agent-skill"
+
+def clean_llm_markdown(raw_text: str) -> str:
+    """Strips leading/trailing markdown code fences if the model wraps the output."""
+    text = raw_text.strip()
+    # Strip markdown block wrappers like ```markdown ... ``` or ```yaml ... ```
+    if text.startswith("```"):
+        lines = text.splitlines()
+        if lines and lines[0].startswith("```"):
+            lines = lines[1:]
+        if lines and lines[-1].strip() == "```":
+            lines = lines[:-1]
+        text = "\n".join(lines).strip()
+    return text
 
 def generate_mock_skill(
     task_desc: str,
@@ -26,26 +40,17 @@ def generate_mock_skill(
     output_style: str = "Balanced",
     include_checklist: bool = True
 ) -> Dict[str, Any]:
-    """
-    Generates a deterministic, standards-compliant SKILL.md template based on inputs.
-    Follows Agent Skills standard specification.
-    """
+    """Generates a deterministic standard-compliant SKILL.md template."""
     skill_slug = slugify(task_desc)
-    
-    # Capitalized readable title
     words = task_desc.strip().split()
     title_words = words[:6] if len(words) > 6 else words
-    readable_title = " ".join(w.capitalize() for w in title_words)
-    if not readable_title:
-        readable_title = "Agent Task Execution Skill"
+    readable_title = " ".join(w.capitalize() for w in title_words) or "Agent Task Execution Skill"
 
-    # User constraints formatting
     if constraints and constraints.strip():
         user_constraints_md = "\n".join(f"- {line.strip()}" for line in constraints.strip().splitlines() if line.strip())
     else:
         user_constraints_md = "- Adhere strictly to user security requirements and sandboxed execution boundaries.\n- Never perform destructive actions or overwrite files without explicit authorization.\n- Return deterministic and verified answers."
 
-    # Style tone adjustment
     if output_style == "Concise":
         verbosity_note = "Provide minimal, high-density outputs. Focus on bullet points and immediate code diffs without conversational filler."
     elif output_style == "Detailed":
@@ -123,3 +128,78 @@ The final response delivered to the user must include:
         "category": category,
         "task_desc": task_desc
     }
+
+def generate_ai_skill(
+    task_desc: str,
+    category: str = "Software Development",
+    constraints: str = "",
+    output_style: str = "Balanced",
+    include_checklist: bool = True,
+    endpoint: str = "http://localhost:11434",
+    model: str = "qwen2.5:7b"
+) -> Dict[str, Any]:
+    """Generates an Agent Skill using the local Ollama LLM model."""
+    client = OllamaClient(endpoint=endpoint, default_model=model)
+    prompt = build_generation_prompt(
+        task_desc=task_desc,
+        category=category,
+        constraints=constraints,
+        output_style=output_style,
+        include_checklist=include_checklist
+    )
+    
+    resp = client.generate(prompt=prompt, system=SYSTEM_PROMPT, model=model)
+    if resp.get("success") and resp.get("response"):
+        cleaned = clean_llm_markdown(resp["response"])
+        # Extract slug from frontmatter or derive from task
+        name_match = re.search(r"^name:\s*([^\n\r]+)", cleaned, re.MULTILINE)
+        if name_match:
+            slug = slugify(name_match.group(1))
+        else:
+            slug = slugify(task_desc)
+            # Inject name if missing
+            if cleaned.startswith("---"):
+                cleaned = cleaned.replace("---", f"---\nname: {slug}", 1)
+                
+        return {
+            "name": slug,
+            "content": cleaned,
+            "is_mock": False,
+            "model": f"Ollama ({model})",
+            "category": category,
+            "task_desc": task_desc
+        }
+    else:
+        # Fallback to mock if Ollama generation failed
+        mock_res = generate_mock_skill(task_desc, category, constraints, output_style, include_checklist)
+        mock_res["error"] = resp.get("error", "Local Ollama generation failed, fell back to template.")
+        return mock_res
+
+def generate_skill_with_ollama(
+    task_desc: str,
+    category: str = "Software Development",
+    constraints: str = "",
+    output_style: str = "Balanced",
+    include_checklist: bool = True,
+    endpoint: str = "http://localhost:11434",
+    model: str = "qwen2.5:7b"
+) -> Dict[str, Any]:
+    """Generates a skill via Ollama or raises RuntimeError if model inference fails."""
+    res = generate_ai_skill(task_desc, category, constraints, output_style, include_checklist, endpoint, model)
+    if res.get("is_mock") and "error" in res:
+        raise RuntimeError(res["error"])
+    return res
+
+def improve_ai_skill(
+    current_content: str,
+    failure_report: str,
+    endpoint: str = "http://localhost:11434",
+    model: str = "qwen2.5:7b"
+) -> str:
+    """Uses the local LLM to refine and fix an existing skill."""
+    client = OllamaClient(endpoint=endpoint, default_model=model)
+    prompt = build_improvement_prompt(current_skill=current_content, failure_report=failure_report)
+    resp = client.generate(prompt=prompt, system=SYSTEM_PROMPT, model=model)
+    if resp.get("success") and resp.get("response"):
+        return clean_llm_markdown(resp["response"])
+    return current_content

@@ -3,8 +3,8 @@ SkillForge — Local Ollama Client Integration
 Facilitates connection checking and model inference against a local Ollama daemon.
 """
 
-import requests
 from typing import Dict, Any, List, Optional
+import requests
 
 class OllamaClient:
     def __init__(self, endpoint: str = "http://localhost:11434", default_model: str = "qwen2.5:7b"):
@@ -17,7 +17,18 @@ class OllamaClient:
             resp = requests.get(f"{self.endpoint}/api/tags", timeout=1.5)
             if resp.status_code == 200:
                 data = resp.json()
-                models = [m.get("name") for m in data.get("models", [])]
+                if not isinstance(data, dict) or not isinstance(data.get("models", []), list):
+                    return {
+                        "connected": False,
+                        "endpoint": self.endpoint,
+                        "models": [],
+                        "message": "Ollama returned an unexpected model-list response."
+                    }
+                models = [
+                    model.get("name")
+                    for model in data.get("models", [])
+                    if isinstance(model, dict) and model.get("name")
+                ]
                 return {
                     "connected": True,
                     "endpoint": self.endpoint,
@@ -37,7 +48,14 @@ class OllamaClient:
                 "models": [],
                 "message": f"Could not connect to Ollama at {self.endpoint}. Daemon is offline or not installed."
             }
-        except Exception as e:
+        except requests.exceptions.Timeout:
+            return {
+                "connected": False,
+                "endpoint": self.endpoint,
+                "models": [],
+                "message": f"Connection to Ollama at {self.endpoint} timed out."
+            }
+        except (requests.exceptions.RequestException, ValueError) as e:
             return {
                 "connected": False,
                 "endpoint": self.endpoint,
@@ -57,19 +75,34 @@ class OllamaClient:
             payload["system"] = system
 
         try:
-            resp = requests.post(f"{self.endpoint}/api/generate", json=payload, timeout=60)
+            resp = requests.post(f"{self.endpoint}/api/generate", json=payload, timeout=180)
             if resp.status_code == 200:
                 result = resp.json()
+                if not isinstance(result, dict):
+                    return {"success": False, "error": "Ollama returned an unexpected generation response."}
+                response = result.get("response")
+                if not isinstance(response, str) or not response.strip():
+                    return {"success": False, "error": "Ollama returned an empty model response."}
                 return {
                     "success": True,
-                    "response": result.get("response", ""),
+                    "response": response,
                     "model": target_model
                 }
             return {
                 "success": False,
-                "error": f"Ollama error HTTP {resp.status_code}: {resp.text}"
+                "error": f"Ollama error HTTP {resp.status_code}: {resp.text[:500]}"
             }
-        except Exception as e:
+        except requests.exceptions.ConnectionError:
+            return {
+                "success": False,
+                "error": f"Could not connect to Ollama at {self.endpoint}. Start Ollama and try again."
+            }
+        except requests.exceptions.Timeout:
+            return {
+                "success": False,
+                "error": "Ollama generation timed out after 180 seconds."
+            }
+        except (requests.exceptions.RequestException, ValueError) as e:
             return {
                 "success": False,
                 "error": f"Failed to reach Ollama: {str(e)}"

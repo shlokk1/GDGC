@@ -17,7 +17,7 @@
 - **🔍 Structural Linter**: Deterministic validation engine checking YAML delimiters, kebab-case naming standard, description criteria, instruction body depth, and required sections.
 - **🧪 Behavioral Testing Lab**: Run simulated scenario tests for instruction clarity, safety guardrails, and output consistency, with 1-click **Self-Improvement** to automatically patch test observations.
 - **📦 In-Memory ZIP Bundler**: Export complete, standard-compliant skill packages on the fly with live ASCII folder tree preview and zero temporary disk residue.
-- **🔒 Local & Private**: 100% private. Ready for Phase 2 zero-cost local LLM inference via Ollama (`qwen2.5:7b`).
+- **🔒 Local & Private**: Generate skills using a local Ollama model (such as `qwen2.5:7b`); prompts are not sent to a cloud model API.
 
 ---
 
@@ -42,9 +42,18 @@ streamlit run app.py
 ```
 Open your browser at `http://localhost:8501`.
 
-### 3. Run Tests
+### 3. Connect a Local Model
+Install and start [Ollama](https://ollama.com/), then download a model if needed:
 ```bash
-python3 -c "import tests.test_skillforge as t; t.test_slugify(); t.test_generate_mock_skill(); t.test_validate_skill_success(); t.test_validate_skill_errors(); t.test_behavioral_evaluator(); t.test_zip_exporter(); print('All tests passed!')"
+ollama pull qwen2.5:7b
+ollama serve
+```
+
+In SkillForge, open **Settings**, confirm the Ollama endpoint (`http://localhost:11434`), click **Detect & Connect to Ollama**, and select an installed model. Local model generation is enabled by default; generated skills are validated before they enter the editor. The deterministic template generator remains available by disabling **Use this local model to generate skills**.
+
+### 4. Run Tests
+```bash
+python3 -m pytest -q
 ```
 
 ---

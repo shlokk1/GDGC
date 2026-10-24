@@ -13,7 +13,7 @@ import streamlit as st
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
 from validator.skill_validator import validate_skill
-from generator.skill_generator import generate_mock_skill, slugify
+from generator.skill_generator import generate_mock_skill, generate_skill_with_ollama, slugify
 from generator.ollama_client import OllamaClient
 from evaluator.test_runner import run_skill_tests, improve_skill_content
 from exporter.zip_exporter import create_skill_zip, sanitize_folder_name, generate_file_tree_view
@@ -59,13 +59,37 @@ def init_session_state():
         "export_folder_name": "",
         "skills_history": [],
         "ollama_endpoint": "http://localhost:11434",
-        "active_model": "qwen2.5:7b (Target)",
+        "active_model": "qwen2.5:7b",
+        "selected_model": "qwen2.5:7b",
+        "ollama_models": [],
         "ollama_connected": False,
-        "execution_mode": "Deterministic Engine (Phase 1)"
+        "use_local_model": True,
+        "ollama_status_message": "",
+        "ollama_checked": False
     }
     for key, val in defaults.items():
         if key not in st.session_state:
             st.session_state[key] = val
+
+    if not st.session_state.ollama_checked:
+        st.session_state.ollama_checked = True
+        try:
+            client = OllamaClient(endpoint=st.session_state.ollama_endpoint)
+            res = client.check_connection()
+            if res.get("connected"):
+                st.session_state.ollama_connected = True
+                models = res.get("models", [])
+                st.session_state.ollama_models = models
+                st.session_state.use_local_model = True
+                if "qwen2.5:7b" in models:
+                    st.session_state.selected_model = "qwen2.5:7b"
+                    st.session_state.active_model = "qwen2.5:7b"
+                elif models:
+                    st.session_state.selected_model = models[0]
+                    st.session_state.active_model = models[0]
+                st.session_state.ollama_status_message = res.get("message", "")
+        except Exception:
+            pass
 
 init_session_state()
 
@@ -183,14 +207,42 @@ def page_create_skill():
                 st.error("⚠️ Task Description is required. Please provide a description of the skill.")
             else:
                 with st.spinner("Synthesizing standard SKILL.md specification..."):
-                    # Deterministic mock generation as per Phase 1 PRD
-                    result = generate_mock_skill(
-                        task_desc=task_desc,
-                        category=category,
-                        constraints=constraints,
-                        output_style=output_style,
-                        include_checklist=include_checklist
-                    )
+                    try:
+                        if st.session_state.use_local_model:
+                            result = generate_skill_with_ollama(
+                                task_desc=task_desc,
+                                category=category,
+                                constraints=constraints,
+                                output_style=output_style,
+                                include_checklist=include_checklist,
+                                endpoint=st.session_state.ollama_endpoint,
+                                model=st.session_state.selected_model,
+                            )
+                            validation = validate_skill(result["content"])
+                            if not validation.get("is_valid"):
+                                failed_checks = [
+                                    check["message"]
+                                    for check in validation.get("checks", [])
+                                    if not check.get("passed") and check.get("level") == "error"
+                                ]
+                                raise ValueError(
+                                    "The model response did not pass skill validation: "
+                                    + "; ".join(failed_checks)
+                                )
+                        else:
+                            result = generate_mock_skill(
+                                task_desc=task_desc,
+                                category=category,
+                                constraints=constraints,
+                                output_style=output_style,
+                                include_checklist=include_checklist
+                            )
+                    except (RuntimeError, ValueError) as exc:
+                        st.error(f"Skill generation failed: {exc}")
+                        return
+
+                    st.session_state.ollama_connected = bool(st.session_state.use_local_model)
+                    st.session_state.active_model = result["model"]
                     st.session_state.skill_name = result["name"]
                     st.session_state.skill_content = result["content"]
                     st.session_state.original_task_desc = task_desc
@@ -214,11 +266,11 @@ def page_create_skill():
                     st.success(f"Skill `{result['name']}` generated successfully!")
                     st.rerun()
 
-        # Phase 1 notice badge
+        # Explain which generation engine is active.
         st.markdown("""
         <div style="margin-top: 16px; padding: 10px 14px; background: rgba(6, 182, 212, 0.08); border: 1px solid rgba(6, 182, 212, 0.2); border-radius: 8px;">
             <p style="font-size: 0.76rem; color: #38bdf8; margin: 0; line-height: 1.4;">
-                ℹ️ <strong>Phase 1 Notice:</strong> Generation uses a deterministic Agent Skills template engine. No external LLM or cloud API is invoked.
+                ℹ️ <strong>Local generation:</strong> Skills are generated by your selected Ollama model and validated before they are added to the workspace. No cloud API is used.
             </p>
         </div>
         """, unsafe_allow_html=True)
@@ -610,11 +662,11 @@ def page_settings():
     st.markdown("""
     <div class="sf-card">
         <div class="sf-card-header">
-            <h3 class="sf-card-title">Local Ollama Integration (Planned Phase 2)</h3>
-            <span class="sf-pill sf-pill-cyan">Local AI Runtime</span>
+            <h3 class="sf-card-title">Local Ollama Model</h3>
+            <span class="sf-pill sf-pill-cyan">Private Inference</span>
         </div>
         <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 16px;">
-            In Phase 2, SkillForge connects directly to Ollama running on your machine to perform live LLM skill generation, autonomous test execution, and continuous revision loops.
+            Connect to Ollama on this machine. Skill generation runs locally, and generated skills are checked before being opened in the editor.
         </p>
     </div>
     """, unsafe_allow_html=True)
@@ -624,47 +676,65 @@ def page_settings():
         value=st.session_state.ollama_endpoint,
         help="Local HTTP endpoint for Ollama REST API."
     )
+    if endpoint_input != st.session_state.ollama_endpoint:
+        st.session_state.ollama_connected = False
+        st.session_state.ollama_status_message = ""
     st.session_state.ollama_endpoint = endpoint_input
 
-    model_options = [
+    if st.button("🔌 Detect & Connect to Ollama", use_container_width=True):
+        client = OllamaClient(endpoint=endpoint_input)
+        result = client.check_connection()
+        st.session_state.ollama_connected = result.get("connected", False)
+        st.session_state.ollama_models = result.get("models", [])
+        st.session_state.ollama_status_message = result.get("message", "Connection check failed.")
+        if result.get("connected") and result.get("models"):
+            if st.session_state.selected_model not in result["models"]:
+                preferred_model = "qwen2.5:7b"
+                st.session_state.selected_model = (
+                    preferred_model if preferred_model in result["models"] else result["models"][0]
+                )
+        st.rerun()
+
+    model_options = st.session_state.ollama_models or [
         "qwen2.5:7b",
         "qwen2.5:3b",
         "llama3.2:3b",
         "deepseek-r1:7b",
         "mistral:7b"
     ]
+    if st.session_state.selected_model not in model_options:
+        model_options = [st.session_state.selected_model] + model_options
     model_choice = st.selectbox(
-        "Target Open-Weight Model",
+        "Ollama Model",
         options=model_options,
-        index=0,
-        help="Selected model for Phase 2 local inference."
+        key="selected_model",
+        help="Choose a model installed in your local Ollama instance."
     )
-    st.session_state.active_model = f"{model_choice} (Target)"
+    st.session_state.active_model = model_choice
 
-    # Live connection test
-    st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
-    if st.button("🔌 Test Connection to Ollama Daemon", use_container_width=True):
-        client = OllamaClient(endpoint=endpoint_input, default_model=model_choice)
-        res = client.check_connection()
-        if res.get("connected"):
-            st.session_state.ollama_connected = True
-            st.success(f"✅ {res.get('message')}")
-            if res.get("models"):
-                st.info(f"Available installed models: {', '.join(res.get('models'))}")
+    st.checkbox(
+        "Use this local model to generate skills",
+        key="use_local_model",
+        help="Disable this only if you want to use the deterministic template generator instead."
+    )
+    if st.session_state.ollama_status_message:
+        if st.session_state.ollama_connected:
+            st.success(st.session_state.ollama_status_message)
+            if st.session_state.ollama_models:
+                st.info(f"Installed local models: {', '.join(st.session_state.ollama_models)}")
         else:
-            st.session_state.ollama_connected = False
-            st.info(f"ℹ️ {res.get('message')}\n\nRunning in Phase 1 Deterministic Mode. To enable Phase 2, start Ollama locally (`ollama serve`).")
+            st.error(st.session_state.ollama_status_message)
+    elif not st.session_state.ollama_connected:
+        st.caption("Connect to Ollama above before generating. If needed, start it with `ollama serve` and install a model with `ollama pull qwen2.5:7b`.")
 
     # Architecture Reference Box
     st.markdown("""
     <div class="sf-card" style="margin-top: 24px;">
         <h4 style="color: #f8fafc; font-size: 1rem; margin-bottom: 10px;">Roadmap &amp; Architecture Roadmap</h4>
         <div style="font-size: 0.83rem; color: #94a3b8; line-height: 1.6;">
-            <div><strong>Phase 1 (Current):</strong> Full Streamlit Pro Max UI/UX, deterministic generation engine, structural linter, illustrative test lab, and in-memory ZIP exporter.</div>
-            <div><strong>Phase 2:</strong> Connect to local <code>qwen2.5:7b</code> via Ollama for zero-cost, private prompt generation.</div>
-            <div><strong>Phase 3:</strong> Extended Agent Skills validator with AST-based parsing and safety scanning.</div>
-            <div><strong>Phase 4:</strong> Behavioral sandboxed sandbox runner executing real agent tasks.</div>
-            <div><strong>Phase 5:</strong> Multi-turn automated self-healing feedback loop.</div>
+            <div><strong>Generation:</strong> Live local model inference through Ollama, followed by structural validation.</div>
+            <div><strong>Evaluation:</strong> Deterministic structural linter and illustrative behavioral test scenarios.</div>
+            <div><strong>Privacy:</strong> Prompts are sent only to the configured Ollama endpoint; no cloud model API is called.</div>
         </div>
     </div>
     """, unsafe_allow_html=True)
