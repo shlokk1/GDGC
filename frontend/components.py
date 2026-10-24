@@ -75,62 +75,54 @@ def render_sidebar():
 
         st.markdown("<div style='height: 18px;'></div>", unsafe_allow_html=True)
 
-        # Projects section with clean SVG icons
+        # Project Context Status in Sidebar
         st.markdown("""
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-            <span style="font-size: 0.76rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em;">Projects</span>
-            <span style="color: #94a3b8; cursor: pointer; display: flex; align-items: center;">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-            </span>
+            <span style="font-size: 0.76rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em;">Project Files</span>
         </div>
         """, unsafe_allow_html=True)
 
-        projects = [
-            ("Default Project", True),
-            ("Kubernetes Skills", False),
-            ("Python Tools", False),
-            ("Research Agents", False),
-        ]
+        num_files = len(st.session_state.get("project_files", {}))
         folder_svg = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>'
-        for p_name, p_active in projects:
-            cls = "sf-proj-item active" if p_active else "sf-proj-item"
-            st.markdown(f"""
-            <div class="{cls}">
-                {folder_svg}
-                <span>{p_name}</span>
-            </div>
-            """, unsafe_allow_html=True)
+        file_status_label = f"{num_files} File(s) Attached" if num_files > 0 else "No Files Attached"
+        st.markdown(f"""
+        <div class="sf-proj-item active">
+            {folder_svg}
+            <span>{file_status_label}</span>
+        </div>
+        """, unsafe_allow_html=True)
 
         st.markdown("<div style='height: 18px;'></div>", unsafe_allow_html=True)
 
-        # Recent Skills section with clean SVG icons
+        # Recent Skills (Real session history, zero mock data)
         search_svg = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>'
         st.markdown(f"""
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-            <span style="font-size: 0.76rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em;">Recent Skills</span>
+            <span style="font-size: 0.76rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em;">Session Skills</span>
             <span style="color: #94a3b8; cursor: pointer; display: flex; align-items: center;">{search_svg}</span>
         </div>
         """, unsafe_allow_html=True)
 
-        recent_items = [
-            ("k8s-helm-audit", "Today, 11:57 AM", True),
-            ("python-code-review", "Dec 1, 2024", False),
-            ("data-analysis-agent", "Nov 28, 2024", False),
-            ("research-assistant", "Nov 25, 2024", False),
-            ("documentation-writer", "Nov 20, 2024", False),
-        ]
+        skills_list = st.session_state.get("skills_history", [])
         doc_svg = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>'
-        for s_slug, s_date, s_active in recent_items:
-            cls = "sf-recent-card active" if s_active else "sf-recent-card"
-            st.markdown(f"""
-            <div class="{cls}">
-                <div style="color: #818cf8; margin-top: 2px; display: flex; align-items: center;">{doc_svg}</div>
-                <div>
-                    <div style="font-size: 0.85rem; font-weight: 600; color: #ffffff;">{s_slug}</div>
-                    <div style="font-size: 0.72rem; color: #64748b;">{s_date}</div>
+        
+        if skills_list:
+            for s_item in reversed(skills_list[-5:]):
+                s_slug = s_item["name"]
+                s_date = s_item.get("created_at", "Just now")
+                is_active = (s_slug == st.session_state.get("skill_name"))
+                cls = "sf-recent-card active" if is_active else "sf-recent-card"
+                st.markdown(f"""
+                <div class="{cls}">
+                    <div style="color: #818cf8; margin-top: 2px; display: flex; align-items: center;">{doc_svg}</div>
+                    <div>
+                        <div style="font-size: 0.85rem; font-weight: 600; color: #ffffff;">{s_slug}</div>
+                        <div style="font-size: 0.72rem; color: #64748b;">{s_date}</div>
+                    </div>
                 </div>
-            </div>
-            """, unsafe_allow_html=True)
+                """, unsafe_allow_html=True)
+        else:
+            st.markdown("<p style='font-size: 0.78rem; color: #64748b; margin-left: 4px;'>No skills generated yet</p>", unsafe_allow_html=True)
 
 def render_stepper(active_step: int = 1):
     """
@@ -245,202 +237,200 @@ def render_test_item(test: Dict[str, Any]):
 def render_skill_rendered_preview(skill_content: str) -> str:
     """
     Renders the Pro Max rich visual preview of a skill specification.
-    Parses sections:
-      - Title
-      - Purpose
-      - When to Use This Skill
-      - Key Capabilities
-      - Workflow (with step cards)
+    Completely dynamic parser with zero mock data.
+    Extracts sections, step workflows, capabilities, and rules directly from markdown.
     """
     import re
+    import html as html_escape
 
-    # Remove YAML frontmatter if present
-    body = skill_content
-    fm_match = re.match(r"^---\s*\n.*?\n---\s*\n?(.*)$", skill_content, re.DOTALL)
+    if not skill_content or not skill_content.strip():
+        return f"""
+        <div class="sf-preview-window" style="text-align: center; padding: 48px 24px;">
+            <div style="width: 48px; height: 48px; border-radius: 12px; background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.2); display: inline-flex; align-items: center; justify-content: center; margin-bottom: 16px;">
+                {icon_cube(24, "#818cf8")}
+            </div>
+            <h3 style="color: #f8fafc; font-size: 1.1rem; font-weight: 600; margin-bottom: 8px;">No Skill Content Generated Yet</h3>
+            <p style="color: #64748b; font-size: 0.88rem; max-width: 420px; margin: 0 auto; line-height: 1.5;">
+                Enter a task description on the left or attach project files and click <strong>Generate Agent Skill</strong> to synthesize your specification with local AI.
+            </p>
+        </div>
+        """
+
+    # 1. Parse Frontmatter if present
+    body = skill_content.strip()
+    fm_name = ""
+    fm_match = re.match(r"^---\s*\n(.*?)\n---\s*\n?(.*)$", body, re.DOTALL)
     if fm_match:
-        body = fm_match.group(1).strip()
+        fm_text = fm_match.group(1)
+        body = fm_match.group(2).strip()
+        name_search = re.search(r"^name:\s*['\"]?(.*?)['\"]?\s*$", fm_text, re.MULTILINE)
+        if name_search:
+            fm_name = name_search.group(1).strip()
 
-    # 1. Title
+    # 2. Extract Title
     title_match = re.search(r"^#\s+(.+)$", body, re.MULTILINE)
-    title = title_match.group(1).strip() if title_match else "Audit Kubernetes Helm Charts And Manifest"
-
-    # Check if this is the k8s skill
-    is_k8s = any(term in (title + body).lower() for term in ["k8s", "helm", "kubernetes"])
-
-    # 2. Purpose
-    purpose_match = re.search(r"##\s*Purpose.*?\n(.*?)(?=\n##|\Z)", body, re.DOTALL | re.IGNORECASE)
-    if purpose_match:
-        raw_purpose = purpose_match.group(1).strip()
-        purpose_text = re.sub(r"[*_`]", "", raw_purpose)
-    elif is_k8s:
-        purpose_text = (
-            "Analyze Kubernetes Helm charts and manifest YAMLs to identify security "
-            "misconfigurations, security risks, privilege escalation paths, and resource "
-            "quota issues. Provide clear, actionable recommendations with explanations."
-        )
+    if title_match:
+        title = title_match.group(1).strip()
+    elif fm_name:
+        title = fm_name.replace("-", " ").title()
     else:
-        purpose_text = "Analyze requirements and execute agent actions with deterministic verification and safety guardrails."
+        title = "Agent Skill Specification"
 
-    # 3. When to Use This Skill
-    when_match = re.search(r"##\s*When to Use.*?\n(.*?)(?=\n##|\Z)", body, re.DOTALL | re.IGNORECASE)
-    when_bullets = []
-    if when_match:
-        for line in when_match.group(1).splitlines():
-            line_str = line.strip().lstrip("-*•").strip()
-            if line_str:
-                when_bullets.append(line_str)
-    if not when_bullets:
-        if is_k8s:
-            when_bullets = [
-                "Reviewing Helm charts before deployment",
-                "Auditing Kubernetes manifests for security and compliance",
-                "Identifying risky configurations in existing clusters",
-                "Validating resource limits and quotas",
-                "Performing pre-deployment security checks",
-            ]
+    # Remove the top # Title from the body to avoid duplicating it
+    body_without_title = re.sub(r"^#\s+.+$", "", body, count=1, flags=re.MULTILINE).strip()
+
+    # 3. Parse all ## Sections
+    section_splits = re.split(r"(?m)^##\s+(.+)$", body_without_title)
+    
+    sections = []
+    # If there is content before the first ##, treat it as Overview/Purpose
+    if section_splits and section_splits[0].strip():
+        intro_content = section_splits[0].strip()
+        sections.append(("Purpose", intro_content))
+
+    idx = 1
+    while idx < len(section_splits):
+        sec_title = section_splits[idx].strip()
+        sec_body = section_splits[idx + 1].strip() if idx + 1 < len(section_splits) else ""
+        sections.append((sec_title, sec_body))
+        idx += 2
+
+    # Map section titles to vector SVG icons
+    def get_section_icon(title_str: str) -> str:
+        low = title_str.lower()
+        if any(w in low for w in ["purpose", "overview", "description", "about", "intent"]):
+            return icon_shield_check(16, "#94a3b8")
+        elif any(w in low for w in ["when", "trigger", "prerequisite", "condition", "scenario", "use"]):
+            return icon_target(16, "#94a3b8")
+        elif any(w in low for w in ["capabilit", "feature", "action", "tool", "scope"]):
+            return icon_cpu(16, "#94a3b8")
+        elif any(w in low for w in ["workflow", "step", "procedure", "process", "execution"]):
+            return icon_workflow(16, "#94a3b8")
+        elif any(w in low for w in ["rule", "constraint", "guardrail", "limit", "security"]):
+            return icon_alert_triangle(16, "#94a3b8")
         else:
-            when_bullets = [
-                "Automating tasks related to this domain",
-                "Auditing configurations against standards",
-                "Identifying risky configurations before deployment",
-                "Validating resource limits and execution bounds",
-                "Performing automated verification checks",
-            ]
+            return icon_file_code(16, "#94a3b8")
 
-    # 4. Key Capabilities
-    cap_match = re.search(r"##\s*Key Capabilities.*?\n(.*?)(?=\n##|\Z)", body, re.DOTALL | re.IGNORECASE)
-    capabilities = []
-    if cap_match:
-        for line in cap_match.group(1).splitlines():
-            line_str = re.sub(r"^\d+\.\s*|^[-*•]\s*", "", line.strip()).strip()
-            if line_str:
-                capabilities.append(line_str)
-    if not capabilities:
-        if is_k8s:
-            capabilities = [
-                "Parse and analyze Helm charts and YAML manifests.",
-                "Identify security misconfigurations and risky patterns.",
-                "Detect privilege escalation vectors.",
-                "Check resource requests, limits, and quota configurations.",
-                "Provide clear explanations and actionable remediation steps.",
-                "Follow Kubernetes and CNCF security best practices.",
-            ]
-        else:
-            capabilities = [
-                "Parse and analyze domain specifications and requirements.",
-                "Identify security misconfigurations and risky patterns.",
-                "Detect potential privilege escalation or execution bugs.",
-                "Check resource requests, limits, and quota configurations.",
-                "Provide clear explanations and actionable remediation steps.",
-                "Follow standard security and architecture best practices.",
-            ]
+    rendered_sections_html = []
 
-    # 5. Workflow
-    wf_match = re.search(r"##\s*(?:Operational\s+)?Workflow.*?\n(.*?)(?=\n##|\Z)", body, re.DOTALL | re.IGNORECASE)
-    wf_steps = []
-    if wf_match:
-        raw_wf = wf_match.group(1).strip()
-        step_blocks = re.split(r"\n(?=\d+\.\s+)", "\n" + raw_wf)
-        for block in step_blocks:
-            block = block.strip()
-            if not block:
-                continue
-            lines = block.splitlines()
-            step_header_match = re.match(r"^(\d+)\.\s*(?:\*\*(.*?)\*\*|(.*?))$", lines[0].strip())
-            if step_header_match:
-                s_num = step_header_match.group(1)
-                s_title = (step_header_match.group(2) or step_header_match.group(3) or "Step").strip()
-                s_bullets = []
-                for b_line in lines[1:]:
-                    clean_b = b_line.strip().lstrip("-*•").strip()
-                    if clean_b:
-                        s_bullets.append(clean_b)
-                wf_steps.append((s_num, s_title, s_bullets))
-    if not wf_steps:
-        wf_steps = [
-            (
-                "1",
-                "Understand the input",
-                [
-                    "Accept Helm chart files, values.yaml files, or Kubernetes manifest YAML files.",
-                    "Identify the file type and relevant components.",
-                ],
-            )
+    for s_title, s_content in sections:
+        sec_icon = get_section_icon(s_title)
+        
+        # Check if content has numbered steps (e.g. "1. **Title**\n - bullet")
+        step_blocks = re.findall(r"(?ms)(?:^|\n)(\d+)\.\s*(?:\*\*(.*?)\*\*|(.*?))(?:\n|$)(.*?)(?=(?:\n\d+\.|\Z))", s_content)
+        
+        # Check if content is primarily a list of bullets
+        bullets = [
+            line.strip().lstrip("-*•").strip() 
+            for line in s_content.splitlines() 
+            if line.strip().startswith(("-", "*", "•")) and line.strip().lstrip("-*•").strip()
         ]
 
-    # Assemble HTML
-    when_html = "".join(f"<li>{b}</li>" for b in when_bullets)
-    cap_html = "".join(
-        f'<div class="sf-cap-item"><span class="sf-num-badge">{idx+1}</span><span class="sf-cap-text">{c}</span></div>'
-        for idx, c in enumerate(capabilities)
-    )
+        if "workflow" in s_title.lower() or "step" in s_title.lower() or (step_blocks and len(step_blocks) >= 2):
+            # Render as workflow step cards
+            cards_html = []
+            for num, b_title, alt_title, block_body in step_blocks:
+                header = (b_title or alt_title or "Step").strip()
+                sub_bullets = [
+                    l.strip().lstrip("-*•").strip() 
+                    for l in block_body.splitlines() 
+                    if l.strip().startswith(("-", "*", "•")) and l.strip().lstrip("-*•").strip()
+                ]
+                other_text = [
+                    l.strip() 
+                    for l in block_body.splitlines() 
+                    if l.strip() and not l.strip().startswith(("-", "*", "•"))
+                ]
+                
+                content_inner = ""
+                if sub_bullets:
+                    b_items = "".join(f"<li>{html_escape.escape(b)}</li>" for b in sub_bullets)
+                    content_inner += f'<ul class="sf-preview-bullets sf-nested-bullets">{b_items}</ul>'
+                elif other_text:
+                    p_items = " ".join(html_escape.escape(t) for t in other_text)
+                    content_inner += f'<div style="font-size: 0.84rem; color: #94a3b8; margin-top: 6px; line-height: 1.45;">{p_items}</div>'
 
-    wf_cards_html = []
-    for s_num, s_title, s_bullets in wf_steps:
-        bullets_html = "".join(f"<li>{b}</li>" for b in s_bullets)
-        wf_cards_html.append(f"""
-        <div class="sf-workflow-box">
-            <div class="sf-workflow-box-header">
-                <span class="sf-num-badge">{s_num}</span>
-                <span class="sf-workflow-box-title">{s_title}</span>
+                cards_html.append(f"""
+                <div class="sf-workflow-box">
+                    <div class="sf-workflow-box-header">
+                        <span class="sf-num-badge">{num}</span>
+                        <span class="sf-workflow-box-title">{html_escape.escape(header)}</span>
+                    </div>
+                    {content_inner}
+                </div>
+                """)
+            
+            rendered_sections_html.append(f"""
+            <div class="sf-preview-sec">
+                <div class="sf-sec-header">
+                    <div style="width: 28px; height: 28px; border-radius: 6px; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); display: flex; align-items: center; justify-content: center;">
+                        {sec_icon}
+                    </div>
+                    <h3 class="sf-sec-title">{html_escape.escape(s_title)}</h3>
+                </div>
+                {"".join(cards_html)}
             </div>
-            <ul class="sf-preview-bullets sf-nested-bullets">
-                {bullets_html}
-            </ul>
-        </div>
-        """)
+            """)
 
-    html = f"""
+        elif ("capabilit" in s_title.lower() or "features" in s_title.lower()) and bullets:
+            # Render as Capabilities Badged List
+            cap_items = "".join(
+                f'<div class="sf-cap-item"><span class="sf-num-badge">{i+1}</span><span class="sf-cap-text">{html_escape.escape(b)}</span></div>'
+                for i, b in enumerate(bullets)
+            )
+            rendered_sections_html.append(f"""
+            <div class="sf-preview-sec">
+                <div class="sf-sec-header">
+                    <div style="width: 28px; height: 28px; border-radius: 6px; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); display: flex; align-items: center; justify-content: center;">
+                        {sec_icon}
+                    </div>
+                    <h3 class="sf-sec-title">{html_escape.escape(s_title)}</h3>
+                </div>
+                <div class="sf-cap-list">
+                    {cap_items}
+                </div>
+            </div>
+            """)
+
+        elif bullets and len(bullets) >= 2 and not any(k in s_title.lower() for k in ["purpose", "overview", "description"]):
+            # Render as Bulleted List
+            bullet_items = "".join(f"<li>{html_escape.escape(b)}</li>" for b in bullets)
+            rendered_sections_html.append(f"""
+            <div class="sf-preview-sec">
+                <div class="sf-sec-header">
+                    <div style="width: 28px; height: 28px; border-radius: 6px; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); display: flex; align-items: center; justify-content: center;">
+                        {sec_icon}
+                    </div>
+                    <h3 class="sf-sec-title">{html_escape.escape(s_title)}</h3>
+                </div>
+                <ul class="sf-preview-bullets">
+                    {bullet_items}
+                </ul>
+            </div>
+            """)
+
+        else:
+            # Render as Clean Prose Block
+            clean_text = html_escape.escape(s_content)
+            # Support basic formatting like inline backticks
+            clean_text = re.sub(r"`([^`]+)`", r'<code style="background: rgba(255,255,255,0.06); padding: 2px 6px; border-radius: 4px; font-size: 0.82rem; color: #a5b4fc;">\1</code>', clean_text)
+            clean_text = clean_text.replace("\n\n", "</p><p class='sf-sec-text'>").replace("\n", "<br/>")
+
+            rendered_sections_html.append(f"""
+            <div class="sf-preview-sec">
+                <div class="sf-sec-header">
+                    <div style="width: 28px; height: 28px; border-radius: 6px; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); display: flex; align-items: center; justify-content: center;">
+                        {sec_icon}
+                    </div>
+                    <h3 class="sf-sec-title">{html_escape.escape(s_title)}</h3>
+                </div>
+                <p class="sf-sec-text">{clean_text}</p>
+            </div>
+            """)
+
+    return f"""
     <div class="sf-preview-window">
-        <h2 class="sf-preview-h1">{title}</h2>
-
-        <!-- Purpose -->
-        <div class="sf-preview-sec">
-            <div class="sf-sec-header">
-                <div style="width: 28px; height: 28px; border-radius: 6px; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); display: flex; align-items: center; justify-content: center;">
-                    {icon_shield_check(16, "#94a3b8")}
-                </div>
-                <h3 class="sf-sec-title">Purpose</h3>
-            </div>
-            <p class="sf-sec-text">{purpose_text}</p>
-        </div>
-
-        <!-- When to Use This Skill -->
-        <div class="sf-preview-sec">
-            <div class="sf-sec-header">
-                <div style="width: 28px; height: 28px; border-radius: 6px; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); display: flex; align-items: center; justify-content: center;">
-                    {icon_target(16, "#94a3b8")}
-                </div>
-                <h3 class="sf-sec-title">When to Use This Skill</h3>
-            </div>
-            <ul class="sf-preview-bullets">
-                {when_html}
-            </ul>
-        </div>
-
-        <!-- Key Capabilities -->
-        <div class="sf-preview-sec">
-            <div class="sf-sec-header">
-                <div style="width: 28px; height: 28px; border-radius: 6px; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); display: flex; align-items: center; justify-content: center;">
-                    {icon_cpu(16, "#94a3b8")}
-                </div>
-                <h3 class="sf-sec-title">Key Capabilities</h3>
-            </div>
-            <div class="sf-cap-list">
-                {cap_html}
-            </div>
-        </div>
-
-        <!-- Workflow -->
-        <div class="sf-preview-sec">
-            <div class="sf-sec-header">
-                <div style="width: 28px; height: 28px; border-radius: 6px; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); display: flex; align-items: center; justify-content: center;">
-                    {icon_workflow(16, "#94a3b8")}
-                </div>
-                <h3 class="sf-sec-title">Workflow</h3>
-            </div>
-            {"".join(wf_cards_html)}
-        </div>
+        <h2 class="sf-preview-h1">{html_escape.escape(title)}</h2>
+        {"".join(rendered_sections_html)}
     </div>
     """
-    return html

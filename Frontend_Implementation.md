@@ -1,7 +1,7 @@
 # SkillForge — Frontend Implementation Architecture & Documentation
 
 ## Overview
-SkillForge is a local-first AI agent skill creator, structural linter, behavioral test lab, and package bundler built with **Python & Streamlit** using a **UI & UX Pro Max** design system.
+SkillForge is a local-first AI agent skill creator, structural linter, behavioral test lab, and package bundler built with a pure **HTML5, CSS3, and JavaScript** Single-Page Application (SPA) frontend served by a high-performance, multi-threaded Python backend using a **UI & UX Pro Max** design system.
 
 This implementation satisfies all requirements specified in [PRD_Frontend.md](PRD_Frontend.md) and aligns with the Agent Skills Open Standard.
 
@@ -28,17 +28,20 @@ SkillForge delivers a modern developer studio interface:
 
 ```
 .
-├── app.py                      # Main Streamlit application and page router
-├── requirements.txt            # Python dependencies (streamlit, pyyaml, requests)
+├── app.py                      # Multi-threaded Python HTTP server & REST API router
+├── requirements.txt            # Python dependencies (pyyaml, requests, pytest)
 ├── Frontend_Implementation.md  # Frontend architecture documentation
 ├── PRD_Frontend.md             # Product Requirements Document
 ├── PS.md                       # Problem Statement
 ├── PS_summarized.md            # Problem Summary & 6-Hour Plan
 ├── README.md                   # Getting Started & Setup Guide
 ├── frontend/
-│   ├── __init__.py
-│   ├── components.py           # Reusable UI widgets (sidebar, hero, stepper, stat cards, check items)
-│   └── styles.py               # Pro Max custom CSS design system
+│   ├── index.html              # Responsive single-page studio application
+│   ├── css/
+│   │   └── style.css           # Pro Max custom CSS design system
+│   └── js/
+│       ├── app.js              # State store, router, event controller, REST API client
+│       └── markdown.js         # Zero-dependency Markdown parser and code formatter
 ├── generator/
 │   ├── __init__.py
 │   ├── prompts.py              # Prompts for LLM synthesis and revision
@@ -54,6 +57,7 @@ SkillForge delivers a modern developer studio interface:
 │   ├── __init__.py
 │   └── zip_exporter.py         # In-memory ZIP bundler & ASCII directory tree generator
 └── tests/
+    ├── test_api.py             # HTTP API and static asset tests
     └── test_skillforge.py      # Unit tests for core functions
 ```
 
@@ -100,11 +104,13 @@ SkillForge delivers a modern developer studio interface:
    ```bash
    pip install -r requirements.txt
    ```
-3. **Launch Streamlit**:
+3. **Launch SkillForge Studio**:
    ```bash
-   streamlit run app.py
+   python3 app.py
    ```
+   Open `http://localhost:8501` in your browser.
 4. **Run Unit Tests**:
    ```bash
-   python3 -c "import tests.test_skillforge as t; t.test_slugify(); t.test_generate_mock_skill(); t.test_validate_skill_success(); t.test_validate_skill_errors(); t.test_behavioral_evaluator(); t.test_zip_exporter(); print('All passed!')"
+   python3 -m unittest discover tests
+   ```
    ```

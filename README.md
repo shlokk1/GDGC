@@ -38,7 +38,7 @@ pip install -r requirements.txt
 
 ### 2. Launch SkillForge
 ```bash
-streamlit run app.py
+python3 app.py
 ```
 Open your browser at `http://localhost:8501`.
 
@@ -49,11 +49,14 @@ ollama pull qwen2.5:7b
 ollama serve
 ```
 
-In SkillForge, open **Settings**, confirm the Ollama endpoint (`http://localhost:11434`), click **Detect & Connect to Ollama**, and select an installed model. Local model generation is enabled by default; generated skills are validated before they enter the editor. The deterministic template generator remains available by disabling **Use this local model to generate skills**.
+In SkillForge, open **Settings**, confirm the Ollama endpoint (`http://localhost:11434`), click **Detect & Connect to Ollama**, and select an installed model. Local model generation is enabled by default; generated skills are validated before they enter the editor. The deterministic template generator remains available by disabling **Use this local model to generate skills**. Live model-based behavioral evaluation is opt-in in the **Tests** tab so it does not delay skill generation.
 
-### 4. Run Tests
+### 4. Describe an Issue and Add a Project
+In **Create Skill**, describe the issue or task the skill should handle, including expected behavior and steps to reproduce when relevant. Attach individual source files or choose **Choose Project Folder** to import a whole project. SkillForge imports supported text/code files, skips common dependency and build folders, and limits model context to 60,000 characters so large projects do not overwhelm the local model.
+
+### 5. Run Tests
 ```bash
-python3 -m pytest -q
+python3 -m unittest discover tests
 ```
 
 ---
@@ -62,7 +65,7 @@ python3 -m pytest -q
 
 ```
 GDGC/
-├── app.py                      # Main Streamlit application & router
+├── app.py                      # Multi-threaded Python server & API router
 ├── requirements.txt            # Dependencies
 ├── Frontend_Implementation.md  # Detailed frontend implementation docs
 ├── PRD_Frontend.md             # Product Requirements Document
@@ -70,12 +73,16 @@ GDGC/
 ├── PS_summarized.md            # Problem summary
 ├── README.md                   # Project overview & guide
 ├── frontend/
-│   ├── components.py           # Reusable widgets (Sidebar, Stepper, Cards, Badges)
-│   └── styles.py               # UI/UX Pro Max CSS design system
+│   ├── index.html              # Modern single-page developer studio interface
+│   ├── css/
+│   │   └── style.css           # UI/UX Pro Max obsidian glassmorphism design system
+│   └── js/
+│       ├── app.js              # Client state, router, and REST API controller
+│       └── markdown.js         # Zero-dependency Markdown parser & formatter
 ├── generator/
 │   ├── prompts.py              # Generation and improvement prompts
 │   ├── skill_generator.py      # Deterministic Agent Skills generator
-│   └── ollama_client.py        # Local Ollama client (Phase 2 integration)
+│   └── ollama_client.py        # Local Ollama client
 ├── validator/
 │   └── skill_validator.py      # Structural & metadata validation engine
 ├── evaluator/

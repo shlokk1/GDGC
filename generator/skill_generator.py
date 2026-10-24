@@ -3,10 +3,12 @@ SkillForge — Skill Generator Module
 Generates standardized Agent Skill specifications.
 Supports:
 1. Live local AI inference via Ollama (qwen2.5:7b).
-2. Deterministic template generation (offline fallback).
+2. Grounding in user-imported project files.
+3. Deterministic template generation (offline fallback).
 """
 
 import re
+import yaml
 from typing import Dict, Any, Optional, List
 from generator.ollama_client import OllamaClient
 from generator.prompts import SYSTEM_PROMPT, build_generation_prompt, build_improvement_prompt
@@ -21,9 +23,14 @@ def slugify(text: str) -> str:
     return slug or "custom-agent-skill"
 
 def clean_llm_markdown(raw_text: str) -> str:
-    """Strips leading/trailing markdown code fences if the model wraps the output."""
+    """
+    Cleans raw LLM response.
+    Extracts the document starting from the first frontmatter delimiter '---'.
+    Removes extraneous markdown fences and preamble.
+    """
     text = raw_text.strip()
-    # Strip markdown block wrappers like ```markdown ... ``` or ```yaml ... ```
+    
+    # Strip markdown block wrappers like ```markdown ... ```
     if text.startswith("```"):
         lines = text.splitlines()
         if lines and lines[0].startswith("```"):
@@ -31,14 +38,72 @@ def clean_llm_markdown(raw_text: str) -> str:
         if lines and lines[-1].strip() == "```":
             lines = lines[:-1]
         text = "\n".join(lines).strip()
+
+    # If the model included commentary before '---', locate the frontmatter
+    fm_idx = text.find("---")
+    if fm_idx != -1:
+        text = text[fm_idx:].strip()
+
+    # If trailing closing code block exists, strip it
+    if text.endswith("```"):
+        text = text[:-3].strip()
+
     return text
+
+def normalize_llm_skill(raw_text: str, task_desc: str) -> str:
+    """Normalize model output to a complete, parseable SKILL.md frontmatter block."""
+    text = clean_llm_markdown(raw_text)
+    heading = re.search(r"(?m)^#{1,6}\s+.+$", text)
+    if not heading:
+        raise ValueError("The local model response did not include a Markdown skill body.")
+
+    metadata_text = text[:heading.start()].strip()
+    body = text[heading.start():].strip()
+    if metadata_text.startswith("---"):
+        metadata_text = metadata_text[3:].strip()
+    if metadata_text.endswith("---"):
+        metadata_text = metadata_text[:-3].strip()
+
+    metadata: Dict[str, Any] = {}
+    try:
+        parsed = yaml.safe_load(metadata_text)
+        if isinstance(parsed, dict):
+            metadata = parsed
+    except yaml.YAMLError:
+        pass
+
+    def metadata_value(key: str) -> Optional[str]:
+        value = metadata.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+        match = re.search(rf"(?m)^\s*{re.escape(key)}\s*:\s*(.*?)\s*$", metadata_text)
+        if not match:
+            return None
+        raw_value = match.group(1).strip()
+        try:
+            parsed_value = yaml.safe_load(raw_value)
+        except yaml.YAMLError:
+            parsed_value = raw_value.strip("\"'")
+        return parsed_value.strip() if isinstance(parsed_value, str) and parsed_value.strip() else None
+
+    name = slugify(metadata_value("name") or task_desc)
+    description = metadata_value("description") or (
+        f"Provides instructions for {task_desc.strip().rstrip('.')}"
+    )
+    safe_description = yaml.safe_dump(
+        description,
+        allow_unicode=True,
+        default_style='"'
+    ).strip()
+    return f"---\nname: {name}\ndescription: {safe_description}\n---\n\n{body}"
 
 def generate_mock_skill(
     task_desc: str,
     category: str = "Software Development",
     constraints: str = "",
     output_style: str = "Balanced",
-    include_checklist: bool = True
+    include_checklist: bool = True,
+    project_files: Optional[Dict[str, str]] = None
 ) -> Dict[str, Any]:
     """Generates a deterministic standard-compliant SKILL.md template."""
     skill_slug = slugify(task_desc)
@@ -70,57 +135,14 @@ Before completing the task, verify:
 - [ ] No extraneous file system or network side-effects occurred.
 """
 
-    is_k8s = any(term in task_desc.lower() for term in ["k8s", "helm", "kubernetes"])
-
-    if is_k8s:
-        readable_title = "Audit Kubernetes Helm Charts And Manifest"
-        purpose_md = "Analyze Kubernetes Helm charts and manifest YAMLs to identify security misconfigurations, security risks, privilege escalation paths, and resource quota issues. Provide clear, actionable recommendations with explanations."
-        when_to_use_md = """- Reviewing Helm charts before deployment
-- Auditing Kubernetes manifests for security and compliance
-- Identifying risky configurations in existing clusters
-- Validating resource limits and quotas
-- Performing pre-deployment security checks"""
-        capabilities_md = """1. Parse and analyze Helm charts and YAML manifests.
-2. Identify security misconfigurations and risky patterns.
-3. Detect privilege escalation vectors.
-4. Check resource requests, limits, and quota configurations.
-5. Provide clear explanations and actionable remediation steps.
-6. Follow Kubernetes and CNCF security best practices."""
-        workflow_md = """1. **Understand the input**
-   - Accept Helm chart files, values.yaml files, or Kubernetes manifest YAML files.
-   - Identify the file type and relevant components.
-
-2. **Inspect & Audit YAML Manifests**
-   - Scan securityContext for runAsNonRoot, privileged, and allowPrivilegeEscalation.
-   - Verify CPU and Memory requests and limits are defined.
-
-3. **Report & Remediate**
-   - Flag risky patterns with clear explanations.
-   - Follow Kubernetes and CNCF security best practices."""
-    else:
-        purpose_md = f"Analyze and execute: {task_desc.strip()} with deterministic verification and standardized safety guards."
-        when_to_use_md = f"""- Automating tasks related to {category.lower()}
-- Auditing and verifying configurations against standards
-- Identifying risky patterns in existing code or infrastructure
-- Validating resource limits and execution constraints
-- Performing pre-deployment security and quality checks"""
-        capabilities_md = f"""1. Parse and analyze requirements for {category.lower()}.
-2. Identify security misconfigurations and risky patterns.
-3. Detect boundary and privilege escalation issues.
-4. Check resource requests, limits, and quota configurations.
-5. Provide clear explanations and actionable remediation steps.
-6. Follow standard industry and safety best practices."""
-        workflow_md = """1. **Understand the input**
-   - Ingest user input and inspect target artifacts.
-   - Identify the file type and relevant components.
-
-2. **Plan & Validation**
-   - Formulate a stepwise execution plan.
-   - Verify that all referenced paths, APIs, or schema exist and are accessible.
-
-3. **Execution & Synthesis**
-   - Perform primary computation or transformation matching the category.
-   - Maintain safety invariants and avoid unauthorized side effects."""
+    ref_files_section = ""
+    if project_files:
+        file_bullets = "\n".join(f"- `{fname}`: project reference artifact" for fname in project_files.keys())
+        ref_files_section = f"""
+## Reference Project Files
+This skill is tailored to the following project artifacts:
+{file_bullets}
+"""
 
     content = f"""---
 name: {skill_slug}
@@ -136,18 +158,41 @@ tags:
 
 # {readable_title}
 
-## Purpose
-{purpose_md}
+## Purpose & Overview
+This skill instructs an AI agent to execute: **{task_desc.strip()}**.
+It establishes a structured procedure, handles boundary conditions, enforces constraints, and guarantees predictable, high-fidelity results.
 
 ## When to Use This Skill
-{when_to_use_md}
+- Performing automated review and auditing for `{category}` workflows.
+- Identifying security misconfigurations, bugs, or syntax errors.
+- Enforcing structured, reproducible quality standards across the project.
 
 ## Key Capabilities
-{capabilities_md}
+1. Ingests and inspects input code, schema, and environment specifications.
+2. Identifies security misconfigurations, bugs, and edge cases.
+3. Formulates prioritized remediation steps with clear rationale.
+4. Strictly respects execution constraints and sandboxed environments.
 
-## Workflow
-{workflow_md}
+## Operational Workflow
+Follow these sequential phases when executing this skill:
 
+1. **Context & Requirement Analysis**
+   - Ingest user input and inspect target artifacts.
+   - Parse all boundary constraints and environment prerequisites.
+   - Clarify any ambiguous instructions before executing actions.
+
+2. **Plan & Validation**
+   - Formulate a stepwise execution plan.
+   - Verify that all referenced paths, APIs, or schema exist and are accessible.
+
+3. **Execution & Synthesis**
+   - Perform primary computation or transformation matching the category: `{category}`.
+   - Maintain safety invariants and avoid unauthorized side effects.
+
+4. **Review & Output Formatting**
+   - Format output according to the specified **{output_style}** style guideline.
+   - Cross-check against the Quality & Verification Checklist.
+{ref_files_section}
 ## Strict Rules & Constraints
 {user_constraints_md}
 - **Style Enforcement**: {verbosity_note}
@@ -176,7 +221,8 @@ def generate_ai_skill(
     output_style: str = "Balanced",
     include_checklist: bool = True,
     endpoint: str = "http://localhost:11434",
-    model: str = "qwen2.5:7b"
+    model: str = "qwen2.5:7b",
+    project_files: Optional[Dict[str, str]] = None
 ) -> Dict[str, Any]:
     """Generates an Agent Skill using the local Ollama LLM model."""
     client = OllamaClient(endpoint=endpoint, default_model=model)
@@ -185,21 +231,47 @@ def generate_ai_skill(
         category=category,
         constraints=constraints,
         output_style=output_style,
-        include_checklist=include_checklist
+        include_checklist=include_checklist,
+        project_files=project_files
     )
     
-    resp = client.generate(prompt=prompt, system=SYSTEM_PROMPT, model=model)
+    resp = client.generate(prompt=prompt, system=SYSTEM_PROMPT, model=model, temperature=0.2)
     if resp.get("success") and resp.get("response"):
-        cleaned = clean_llm_markdown(resp["response"])
-        # Extract slug from frontmatter or derive from task
-        name_match = re.search(r"^name:\s*([^\n\r]+)", cleaned, re.MULTILINE)
-        if name_match:
-            slug = slugify(name_match.group(1))
-        else:
-            slug = slugify(task_desc)
-            # Inject name if missing
-            if cleaned.startswith("---"):
-                cleaned = cleaned.replace("---", f"---\nname: {slug}", 1)
+        try:
+            cleaned = normalize_llm_skill(resp["response"], task_desc)
+        except ValueError as exc:
+            retry_prompt = (
+                "Your previous response could not be used because "
+                f"{exc}\nRegenerate the complete skill. Put a closing --- line after the YAML "
+                "frontmatter and include a Markdown heading and body. Return only SKILL.md.\n\n"
+                f"Original task:\n{prompt}\n\nPrevious response:\n{resp['response']}"
+            )
+            retry_resp = client.generate(
+                prompt=retry_prompt,
+                system=SYSTEM_PROMPT,
+                model=model,
+                temperature=0.1
+            )
+            if not retry_resp.get("success") or not retry_resp.get("response"):
+                mock_res = generate_mock_skill(
+                    task_desc, category, constraints, output_style, include_checklist, project_files
+                )
+                mock_res["error"] = retry_resp.get(
+                    "error",
+                    "The local model returned an incomplete skill document and the retry failed."
+                )
+                return mock_res
+            try:
+                cleaned = normalize_llm_skill(retry_resp["response"], task_desc)
+            except ValueError as retry_error:
+                mock_res = generate_mock_skill(
+                    task_desc, category, constraints, output_style, include_checklist, project_files
+                )
+                mock_res["error"] = f"The local model returned an incomplete skill document: {retry_error}"
+                return mock_res
+
+        name_match = re.match(r"^---\s*\nname:\s*([^\n\r]+)", cleaned)
+        slug = name_match.group(1).strip() if name_match else slugify(task_desc)
                 
         return {
             "name": slug,
@@ -211,7 +283,7 @@ def generate_ai_skill(
         }
     else:
         # Fallback to mock if Ollama generation failed
-        mock_res = generate_mock_skill(task_desc, category, constraints, output_style, include_checklist)
+        mock_res = generate_mock_skill(task_desc, category, constraints, output_style, include_checklist, project_files)
         mock_res["error"] = resp.get("error", "Local Ollama generation failed, fell back to template.")
         return mock_res
 
@@ -222,10 +294,20 @@ def generate_skill_with_ollama(
     output_style: str = "Balanced",
     include_checklist: bool = True,
     endpoint: str = "http://localhost:11434",
-    model: str = "qwen2.5:7b"
+    model: str = "qwen2.5:7b",
+    project_files: Optional[Dict[str, str]] = None
 ) -> Dict[str, Any]:
     """Generates a skill via Ollama or raises RuntimeError if model inference fails."""
-    res = generate_ai_skill(task_desc, category, constraints, output_style, include_checklist, endpoint, model)
+    res = generate_ai_skill(
+        task_desc,
+        category,
+        constraints,
+        output_style,
+        include_checklist,
+        endpoint,
+        model,
+        project_files=project_files
+    )
     if res.get("is_mock") and "error" in res:
         raise RuntimeError(res["error"])
     return res
@@ -239,7 +321,7 @@ def improve_ai_skill(
     """Uses the local LLM to refine and fix an existing skill."""
     client = OllamaClient(endpoint=endpoint, default_model=model)
     prompt = build_improvement_prompt(current_skill=current_content, failure_report=failure_report)
-    resp = client.generate(prompt=prompt, system=SYSTEM_PROMPT, model=model)
+    resp = client.generate(prompt=prompt, system=SYSTEM_PROMPT, model=model, temperature=0.2)
     if resp.get("success") and resp.get("response"):
         return clean_llm_markdown(resp["response"])
     return current_content

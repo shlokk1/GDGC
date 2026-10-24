@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SkillForge — AI Agent Skill Studio</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>❖</text></svg>">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<div class="app-container">
+  <!-- ==================== SIDEBAR ==================== -->
+  <aside class="sf-sidebar">
+    <div class="sf-brand-box">
+      <div class="sf-brand-left">
+        <div class="sf-brand-logo">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+            <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+            <line x1="12" y1="22.08" x2="12" y2="12"></line>
+          </svg>
+        </div>
+        <div>
+          <h2 class="sf-brand-title">SkillForge</h2>
+          <p class="sf-brand-sub">AI Agent Skill Builder</p>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn-new-skill" onclick="resetNewSkill()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="12" y1="5" x2="12" y2="19"></line>
+        <line x1="5" y1="12" x2="19" y2="12"></line>
+      </svg>
+      <span>+ New Skill</span>
+    </button>
+
+    <nav class="sf-nav-menu">
+      <button class="sf-nav-item active" data-page="create-skill" onclick="navigateTo('create-skill')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+        </svg>
+        <span>Create Skill</span>
+      </button>
+
+      <button class="sf-nav-item" data-page="my-skills" onclick="navigateTo('my-skills')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+          <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+        </svg>
+        <span>My Skills</span>
+      </button>
+
+      <button class="sf-nav-item" data-page="testing-lab" onclick="navigateTo('testing-lab')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M10 2v7.31L4.69 19.3A2 2 0 0 0 6.42 22h11.16a2 2 0 0 0 1.73-2.7L14 9.31V2"></path>
+          <line x1="8.5" y1="2" x2="15.5" y2="2"></line>
+          <line x1="6.5" y1="16" x2="17.5" y2="16"></line>
+        </svg>
+        <span>Testing Lab</span>
+      </button>
+
+      <button class="sf-nav-item" data-page="settings" onclick="navigateTo('settings')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+        <span>Settings</span>
+      </button>
+    </nav>
+
+    <div class="sf-sidebar-footer">
+      <div class="sf-sidebar-card">
+        <div class="sf-sidebar-card-label">
+          <span>Engine Status</span>
+          <span style="font-size: 0.68rem; color: #64748b;">Local-First</span>
+        </div>
+        <div id="sidebar-model-status" class="sf-pill sf-pill-cyan">
+          <span class="status-dot status-dot-cyan"></span>
+          <span>Offline Engine</span>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ==================== MAIN CONTENT ==================== -->
+  <main class="sf-main">
+
+    <!-- PAGE 1: CREATE SKILL -->
+    <section id="page-create-skill" class="page-view active">
+      <div class="sf-header">
+        <div class="sf-breadcrumb-bar">
+          <div class="sf-breadcrumbs">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+            </svg>
+            <span>Project</span>
+            <span class="sep">›</span>
+            <span id="breadcrumb-skill-name" class="active-item">New Skill</span>
+          </div>
+          <span class="sf-pill sf-pill-indigo">Standard v1.0</span>
+        </div>
+
+        <h1 class="sf-page-title">Create Your AI Skill</h1>
+        <p class="sf-page-subtitle">Describe your idea and transform it into a structured, reusable AI agent skill.</p>
+      </div>
+
+      <div class="workspace-grid">
+        <!-- LEFT COLUMN: Requirements Form -->
+        <div class="workspace-left">
+          <!-- Presets Accordion -->
+          <div class="presets-accordion">
+            <div id="presets-toggle" class="presets-header">
+              <span style="display: flex; align-items: center; gap: 6px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+                <span>Quick Prompt Presets</span>
+              </span>
+              <span style="font-size: 0.74rem; color: #818cf8;">Toggle ▾</span>
+            </div>
+            <div id="presets-content" class="presets-content">
+              <div class="presets-btn-row">
+                <button type="button" class="btn-preset" onclick="applyPreset('python')">Python Review</button>
+                <button type="button" class="btn-preset" onclick="applyPreset('k8s')">K8s Helm Audit</button>
+                <button type="button" class="btn-preset" onclick="applyPreset('openapi')">OpenAPI Spec</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Main Input Card -->
+          <div class="sf-card">
+            <div class="sf-card-header">
+              <div class="sf-card-title">
+                <span style="width: 24px; height: 24px; border-radius: 50%; background: var(--accent-indigo); color: #fff; font-size: 0.75rem; display: inline-flex; align-items: center; justify-content: center; font-weight: 700;">1</span>
+                <span>Skill Requirements</span>
+              </div>
+            </div>
+
+            <!-- Task Description -->
+            <div class="form-group">
+              <label class="form-label" for="input-task-desc">Describe the issue or task this skill should handle *</label>
+              <textarea id="input-task-desc" class="form-control" rows="4" placeholder="Describe the issue, what you expected, what happened, and any steps to reproduce it..."></textarea>
+              <p class="checkbox-desc">You can report an issue in your own words. The generated skill will use this description and any attached project files as context.</p>
+              <div id="desc-char-count" class="char-count">0/2000</div>
+            </div>
+
+            <!-- Category & Style -->
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label" for="select-category">Skill Category</label>
+                <select id="select-category" class="form-control">
+                  <option value="Software Development">Software Development</option>
+                  <option value="Research & Analysis">Research & Analysis</option>
+                  <option value="Writing & Documentation">Writing & Documentation</option>
+                  <option value="Data Processing">Data Processing</option>
+                  <option value="Productivity">Productivity</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="select-output-style">Output Style</label>
+                <select id="select-output-style" class="form-control">
+                  <option value="Balanced">Balanced</option>
+                  <option value="Detailed">Detailed</option>
+                  <option value="Concise">Concise</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Rules & Constraints -->
+            <div class="form-group">
+              <label class="form-label" for="input-constraints">Rules and Constraints (Optional)</label>
+              <textarea id="input-constraints" class="form-control" rows="3" placeholder="e.g., Flag runAsRoot permissions. Check CPU and Memory limits."></textarea>
+              <div id="constraints-char-count" class="char-count">0/1000</div>
+            </div>
+
+            <!-- Quality Checklist Toggle -->
+            <div class="form-group">
+              <label class="checkbox-label">
+                <input type="checkbox" id="checkbox-checklist" checked>
+                <span>Include Quality Checklist</span>
+              </label>
+              <p class="checkbox-desc">Add a verification checklist to the generated skill.</p>
+            </div>
+
+            <!-- Project Files Importer -->
+            <div class="form-group" style="margin-top: 14px;">
+              <label class="form-label" style="display: flex; justify-content: space-between;">
+                <span>Upload Project Files or a Whole Project Folder</span>
+                <span id="attached-files-count" style="color: #64748b; font-weight: normal;">(0 attached)</span>
+              </label>
+
+              <div id="dropzone" class="dropzone-container">
+                <input type="file" id="file-upload-input" multiple style="display: none;" accept=".py,.yaml,.yml,.json,.md,.txt,.sh,.sql,.toml,.js,.jsx,.ts,.tsx,.html,.css,.scss,.go,.rs,.java,.kt,.swift,.c,.h,.cpp,.cs,.rb,.php,.vue,.svelte,.xml,.ini,.cfg,.properties,.gradle">
+                <input type="file" id="project-folder-input" style="display: none;" webkitdirectory directory multiple>
+                <div class="dropzone-text">
+                  Choose individual files, select a project folder, or drag and drop files here
+                </div>
+                <div class="dropzone-actions">
+                  <button type="button" id="browse-project-files" class="btn-secondary">Browse Files</button>
+                  <button type="button" id="browse-project-folder" class="btn-secondary">Choose Project Folder</button>
+                </div>
+                <div class="dropzone-sub">Imports text/code files only. Skips .git, dependencies, build output, unsupported files, and files over 256 KB. Up to 100 files / 5 MB.</div>
+              </div>
+
+              <div id="attached-files-container"></div>
+            </div>
+
+            <!-- Generate Button -->
+            <button id="btn-generate-skill" class="btn-generate" onclick="generateSkill()">
+              <span>Generate Skill →</span>
+            </button>
+
+            <!-- Stepper -->
+            <div class="sf-stepper">
+              <div id="step-node-1" class="sf-step-item active">
+                <div class="sf-step-circle">1</div>
+                <div class="sf-step-label">Task Spec</div>
+              </div>
+              <div id="step-node-2" class="sf-step-item">
+                <div class="sf-step-circle">2</div>
+                <div class="sf-step-label">Skill Draft</div>
+              </div>
+              <div id="step-node-3" class="sf-step-item">
+                <div class="sf-step-circle">3</div>
+                <div class="sf-step-label">Validation</div>
+              </div>
+              <div id="step-node-4" class="sf-step-item">
+                <div class="sf-step-circle">4</div>
+                <div class="sf-step-label">Tests</div>
+              </div>
+              <div id="step-node-5" class="sf-step-item">
+                <div class="sf-step-circle">5</div>
+                <div class="sf-step-label">ZIP Export</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT COLUMN: Results Workspace -->
+        <div class="workspace-right">
+          <!-- Empty State -->
+          <div id="workspace-empty-state" class="sf-card" style="text-align: center; padding: 56px 24px;">
+            <div style="display: flex; justify-content: center; margin-bottom: 16px;">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+                <polyline points="2 17 12 22 22 17"></polyline>
+                <polyline points="2 12 12 17 22 12"></polyline>
+              </svg>
+            </div>
+            <h3 style="font-size: 1.3rem; font-weight: 700; color: #f8fafc; margin-bottom: 8px;">Agent Workspace Idle</h3>
+            <p style="font-size: 0.88rem; color: #94a3b8; max-width: 420px; margin: 0 auto 20px;">
+              Enter a task description on the left or click one of the quick presets to synthesize your first standardized AI agent skill package.
+            </p>
+            <div style="display: inline-flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+              <span class="sf-pill sf-pill-indigo">YAML Frontmatter</span>
+              <span class="sf-pill sf-pill-cyan">Deterministic Linter</span>
+              <span class="sf-pill sf-pill-emerald">ZIP Bundler</span>
+            </div>
+          </div>
+
+          <!-- Active Tabs State -->
+          <div id="workspace-active-tabs" style="display: none;">
+            <div class="sf-tabs">
+              <button class="sf-tab-btn active" data-tab="preview" onclick="switchTab('preview')">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                <span>Preview</span>
+              </button>
+              <button class="sf-tab-btn" data-tab="code" onclick="switchTab('code')">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+                <span>Code</span>
+              </button>
+              <button class="sf-tab-btn" data-tab="validation" onclick="switchTab('validation')">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                <span>Validation</span>
+              </button>
+              <button class="sf-tab-btn" data-tab="tests" onclick="switchTab('tests')">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 2v7.31L4.69 19.3A2 2 0 0 0 6.42 22h11.16a2 2 0 0 0 1.73-2.7L14 9.31V2"></path></svg>
+                <span>Tests</span>
+              </button>
+            </div>
+
+            <!-- TAB 1: PREVIEW -->
+            <div id="tab-pane-preview" class="sf-tab-pane active">
+              <div id="preview-container" class="preview-pane"></div>
+            </div>
+
+            <!-- TAB 2: CODE & EDIT -->
+            <div id="tab-pane-code" class="sf-tab-pane">
+              <div class="code-editor-box">
+                <div class="code-editor-header">
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 0.76rem; font-weight: 700; color: #a5b4fc; text-transform: uppercase;">Active File:</span>
+                    <span id="code-active-file" style="font-family: var(--font-mono); font-size: 0.88rem; font-weight: 700; color: #ffffff;">my-skill/SKILL.md</span>
+                  </div>
+
+                  <div style="display: flex; align-items: center; gap: 14px;">
+                    <span id="code-last-saved" class="sf-pill sf-pill-indigo" style="font-size: 0.72rem;">Last Saved: Just now</span>
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                      <span style="font-size: 0.76rem; color: #94a3b8; font-weight: 600;">Edit Mode</span>
+                      <label class="toggle-switch">
+                        <input type="checkbox" id="toggle-edit-mode" onchange="toggleEditMode()">
+                        <span class="slider"></span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Read-only View -->
+                <div id="code-view-container" style="max-height: 480px; overflow-y: auto; padding: 14px; background: #080c14;">
+                  <pre><code id="code-display" style="font-family: var(--font-mono); font-size: 0.84rem; color: #f1f5f9; white-space: pre-wrap;"></code></pre>
+                </div>
+
+                <!-- Editable View -->
+                <div id="code-edit-container" style="display: none;">
+                  <textarea id="code-textarea" class="code-editor-textarea"></textarea>
+                  <div style="padding: 10px 14px; background: rgba(15, 23, 42, 0.8); display: flex; gap: 10px;">
+                    <button class="btn-primary" onclick="saveEdits()">Save Edits</button>
+                    <button class="btn-secondary" onclick="runValidation()">Run Validation</button>
+                    <button class="btn-secondary" onclick="runTests()">Run Behavioral Tests</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Export Box -->
+              <div class="sf-card" style="margin-top: 16px;">
+                <div class="sf-card-header">
+                  <h4 style="font-size: 0.95rem; font-weight: 700; color: #ffffff;">Export Skill ZIP Bundle</h4>
+                  <span class="sf-pill sf-pill-indigo">In-Memory Package</span>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="export-folder-input">Folder / Package Slug</label>
+                  <input type="text" id="export-folder-input" class="form-control" oninput="updateAsciiTree()">
+                </div>
+
+                <div style="font-size: 0.78rem; font-weight: 700; color: #a5b4fc; text-transform: uppercase;">Archive Structure:</div>
+                <div id="ascii-tree-preview" class="sf-tree-box">Loading tree...</div>
+
+                <button class="btn-primary" style="width: 100%; justify-content: center; padding: 10px;" onclick="downloadZip()">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                  <span>Download Archive (.zip)</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- TAB 3: VALIDATION -->
+            <div id="tab-pane-validation" class="sf-tab-pane">
+              <div class="sf-stat-grid">
+                <div class="sf-stat-box">
+                  <div class="sf-stat-label">Validation Status</div>
+                  <div id="val-status-badge" class="sf-stat-val" style="color: #10b981;">PASSED</div>
+                </div>
+                <div class="sf-stat-box">
+                  <div class="sf-stat-label">Compliance Score</div>
+                  <div id="val-score-text" class="sf-stat-val" style="color: #6366f1;">100%</div>
+                </div>
+                <div class="sf-stat-box">
+                  <div class="sf-stat-label">Passed Checks</div>
+                  <div id="val-checks-count" class="sf-stat-val" style="color: #38bdf8;">4/4</div>
+                </div>
+              </div>
+
+              <div id="val-summary-text" style="font-size: 0.88rem; color: #cbd5e1; margin-bottom: 14px;"></div>
+
+              <div style="font-size: 0.8rem; font-weight: 700; color: #a5b4fc; text-transform: uppercase; margin-bottom: 10px;">Detailed Structural Checks:</div>
+              <div id="val-checks-list"></div>
+
+              <div style="margin-top: 14px;">
+                <button id="btn-revalidate" class="btn-secondary" style="width: 100%; justify-content: center;" onclick="runValidation()">Re-Validate Current Content</button>
+              </div>
+            </div>
+
+            <!-- TAB 4: TESTS -->
+            <div id="tab-pane-tests" class="sf-tab-pane">
+              <div class="sf-stat-grid">
+                <div class="sf-stat-box">
+                  <div class="sf-stat-label">Total Scenarios</div>
+                  <div id="test-total-count" class="sf-stat-val">3</div>
+                </div>
+                <div class="sf-stat-box">
+                  <div class="sf-stat-label">Passed Scenarios</div>
+                  <div id="test-passed-count" class="sf-stat-val" style="color: #10b981;">3</div>
+                </div>
+                <div class="sf-stat-box">
+                  <div class="sf-stat-label">Pass Rate</div>
+                  <div id="test-pass-rate" class="sf-stat-val" style="color: #6366f1;">100%</div>
+                </div>
+              </div>
+
+              <div style="padding: 8px 12px; background: rgba(99, 102, 241, 0.08); border: 1px solid rgba(99, 102, 241, 0.2); border-radius: 8px; margin-bottom: 14px; font-size: 0.8rem; color: #a5b4fc;">
+                <strong>Evaluation Engine:</strong> <span id="test-engine-badge">Fast Deterministic Engine</span>
+              </div>
+
+              <div id="test-scenarios-list"></div>
+
+              <div class="actions-row full-width">
+                <button id="btn-self-improve" class="btn-primary" onclick="selfImproveSkill()">⚡ Self-Improve Skill</button>
+                <button id="btn-rerun-tests" class="btn-secondary" onclick="runTests()">Re-run All Tests</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PAGE 2: MY SKILLS -->
+    <section id="page-my-skills" class="page-view">
+      <div class="sf-hero-card">
+        <h1 class="sf-hero-title">Session Skills Library</h1>
+        <p class="sf-hero-desc">Manage and inspect all skills generated in your current interactive session.</p>
+        <span class="sf-pill sf-pill-indigo">Session Memory (Phase 1)</span>
+      </div>
+
+      <div id="my-skills-empty" class="sf-card" style="text-align: center; padding: 48px;">
+        <div style="display: flex; justify-content: center; margin-bottom: 14px;">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+        </div>
+        <h3 style="color: #f8fafc; font-size: 1.2rem; margin-bottom: 6px;">No Skills Created Yet</h3>
+        <p style="color: #94a3b8; font-size: 0.88rem; max-width: 400px; margin: 0 auto 16px;">
+          You haven't generated any agent skills in this session yet. Head over to Create Skill to get started.
+        </p>
+        <button class="btn-primary" onclick="navigateTo('create-skill')">Create Skill</button>
+      </div>
+
+      <div id="my-skills-grid"></div>
+    </section>
+
+    <!-- PAGE 3: TESTING LAB -->
+    <section id="page-testing-lab" class="page-view">
+      <div class="sf-hero-card">
+        <h1 class="sf-hero-title">Testing & Quality Lab</h1>
+        <p class="sf-hero-desc">Deep diagnostic evaluation suite. Validates structural syntax and simulates behavioral execution against standard test scenarios.</p>
+      </div>
+
+      <div id="testing-lab-empty" class="sf-card" style="text-align: center; padding: 48px;">
+        <div style="display: flex; justify-content: center; margin-bottom: 14px;">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2"><path d="M10 2v7.31L4.69 19.3A2 2 0 0 0 6.42 22h11.16a2 2 0 0 0 1.73-2.7L14 9.31V2"></path></svg>
+        </div>
+        <h3 style="color: #f8fafc; font-size: 1.2rem; margin-bottom: 6px;">No Active Skill Selected</h3>
+        <p style="color: #94a3b8; font-size: 0.88rem; max-width: 400px; margin: 0 auto 16px;">
+          Please create or load a skill in the workspace to run the behavioral evaluation suite.
+        </p>
+        <button class="btn-primary" onclick="navigateTo('create-skill')">Create Skill First</button>
+      </div>
+
+      <div id="testing-lab-content" style="display: none;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+          <div>
+            <span style="font-size: 0.85rem; color: #94a3b8;">Testing Skill:</span>
+            <span id="tlab-skill-name" style="font-family: var(--font-mono); font-size: 1.1rem; font-weight: 700; color: #ffffff; margin-left: 8px;"></span>
+          </div>
+          <span class="sf-pill sf-pill-indigo">Agent Skills Standard v1.0</span>
+        </div>
+
+        <div class="sf-stat-grid grid-4">
+          <div class="sf-stat-box">
+            <div class="sf-stat-label">Structural Status</div>
+            <div id="tlab-struct-status" class="sf-stat-val">PASSED</div>
+          </div>
+          <div class="sf-stat-box">
+            <div class="sf-stat-label">Validation Score</div>
+            <div id="tlab-val-score" class="sf-stat-val" style="color: #6366f1;">100%</div>
+          </div>
+          <div class="sf-stat-box">
+            <div class="sf-stat-label">Behavioral Tests</div>
+            <div id="tlab-tests-ratio" class="sf-stat-val" style="color: #38bdf8;">3/3</div>
+          </div>
+          <div class="sf-stat-box">
+            <div class="sf-stat-label">Pass Rate</div>
+            <div id="tlab-tests-rate" class="sf-stat-val" style="color: #10b981;">100%</div>
+          </div>
+        </div>
+
+        <div class="workspace-grid">
+          <div>
+            <h4 style="font-size: 1.05rem; font-weight: 700; color: #f8fafc; margin-bottom: 12px;">Structural Linter Checks</h4>
+            <div id="tlab-checks-list"></div>
+          </div>
+          <div>
+            <h4 style="font-size: 1.05rem; font-weight: 700; color: #f8fafc; margin-bottom: 12px;">Behavioral Scenario Results</h4>
+            <div id="tlab-tests-list"></div>
+          </div>
+        </div>
+
+        <div class="actions-row" style="margin-top: 24px;">
+          <button class="btn-secondary" onclick="navigateTo('create-skill')">Return to Workspace</button>
+          <button class="btn-secondary" onclick="runTests(); runValidation();">Re-evaluate All</button>
+          <button class="btn-primary" onclick="selfImproveSkill()">⚡ Self-Improve Skill</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- PAGE 4: SETTINGS -->
+    <section id="page-settings" class="page-view">
+      <div class="sf-hero-card">
+        <h1 class="sf-hero-title">Engine Configuration & Settings</h1>
+        <p class="sf-hero-desc">Configure local AI runtime connection and inspection parameters. SkillForge is built local-first for 100% data privacy.</p>
+      </div>
+
+      <div class="sf-card">
+        <div class="sf-card-header">
+          <h3 class="sf-card-title">Local Ollama Model</h3>
+          <span class="sf-pill sf-pill-cyan">Private Inference</span>
+        </div>
+        <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 16px;">
+          Connect to Ollama running on this machine. Skill generation runs completely locally without cloud API dependencies.
+        </p>
+
+        <div class="form-group">
+          <label class="form-label" for="ollama-endpoint-input">Ollama Daemon Endpoint</label>
+          <input type="text" id="ollama-endpoint-input" class="form-control" value="http://localhost:11434">
+        </div>
+
+        <button id="btn-detect-ollama" class="btn-secondary" style="width: 100%; justify-content: center; margin-bottom: 14px;" onclick="detectOllama()">
+          Detect & Connect to Ollama
+        </button>
+
+        <div id="ollama-status-banner" style="display: none; margin-bottom: 16px; padding: 12px;"></div>
+
+        <div class="form-group">
+          <label class="form-label" for="ollama-model-select">Selected Model</label>
+          <select id="ollama-model-select" class="form-control" onchange="state.ollama.selectedModel = this.value; updateSidebarStatus();">
+            <option value="qwen2.5:7b">qwen2.5:7b</option>
+            <option value="qwen2.5:3b">qwen2.5:3b</option>
+            <option value="llama3.2:3b">llama3.2:3b</option>
+            <option value="deepseek-r1:7b">deepseek-r1:7b</option>
+            <option value="mistral:7b">mistral:7b</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="checkbox-use-local" checked onchange="state.ollama.useLocalModel = this.checked">
+            <span>Use this local model to generate skills</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="sf-card" style="margin-top: 20px;">
+        <h4 style="color: #f8fafc; font-size: 1rem; margin-bottom: 10px;">Roadmap & Architecture Reference</h4>
+        <div style="font-size: 0.84rem; color: #94a3b8; line-height: 1.6;">
+          <div><strong>Generation:</strong> Live local model inference through Ollama, followed by structural validation.</div>
+          <div><strong>Evaluation:</strong> Deterministic structural linter and illustrative behavioral test scenarios.</div>
+          <div><strong>Privacy:</strong> Prompts are sent only to the configured Ollama endpoint; no cloud model API is called.</div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- Toast Container -->
+<div id="toast-container"></div>
+
+<!-- Modal Dialog -->
+<div id="sf-modal-overlay" class="sf-modal-overlay">
+  <div class="sf-modal">
+    <div class="sf-modal-header">
+      <div id="modal-title" class="sf-modal-title">File Details</div>
+      <button class="sf-modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div id="modal-content" class="sf-modal-body"></div>
+  </div>
+</div>
+
+<script src="/js/markdown.js"></script>
+<script src="/js/app.js"></script>
+</body>
+</html>

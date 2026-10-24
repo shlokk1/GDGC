@@ -201,9 +201,9 @@ def validate_skill(content: str) -> Dict[str, Any]:
         })
     
     # 6. Structural headings (Purpose, Workflow, Constraints / Rules)
-    has_purpose = bool(re.search(r"#+\s*(purpose|overview|goal)", body, re.IGNORECASE))
-    has_workflow = bool(re.search(r"#+\s*(workflow|steps|instructions|process|procedure)", body, re.IGNORECASE))
-    has_rules = bool(re.search(r"#+\s*(rules|constraints|guidelines|requirements|output)", body, re.IGNORECASE))
+    has_purpose = bool(re.search(r"(?im)^#+\s+.*\b(purpose|overview|goal)\b", body))
+    has_workflow = bool(re.search(r"(?im)^#+\s+.*\b(workflow|steps|instructions|process|procedure)\b", body))
+    has_rules = bool(re.search(r"(?im)^#+\s+.*\b(rules|constraints|guidelines|requirements|output)\b", body))
     
     if has_purpose and has_workflow and has_rules:
         checks.append({
