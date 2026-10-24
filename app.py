@@ -255,17 +255,33 @@ class SkillForgeHTTPHandler(BaseHTTPRequestHandler):
         elif path == "/api/improve":
             skill_content = body.get("skill_content", "")
             failed_tests = body.get("failed_tests", [])
+            manual_feedback = body.get("manual_feedback", "").strip()
             use_local_llm = body.get("use_local_llm", False)
             endpoint = body.get("endpoint", SERVER_STATE["ollama_endpoint"])
             model = body.get("model", SERVER_STATE["selected_model"])
 
-            improved = improve_skill_content(
-                skill_content=skill_content,
-                failed_tests=failed_tests,
-                use_local_llm=use_local_llm,
-                endpoint=endpoint,
-                model=model
-            )
+            if manual_feedback and not use_local_llm:
+                self.send_error_json(
+                    "Connect to Ollama and enable local model generation to apply manual feedback.",
+                    status=503
+                )
+                return
+            if manual_feedback and len(manual_feedback) > 2000:
+                self.send_error_json("Manual feedback must be 2,000 characters or fewer.", status=400)
+                return
+
+            try:
+                improved = improve_skill_content(
+                    current_content=skill_content,
+                    failed_tests=failed_tests,
+                    use_local_llm=use_local_llm,
+                    endpoint=endpoint,
+                    model=model,
+                    manual_feedback=manual_feedback
+                )
+            except RuntimeError as e:
+                self.send_error_json(str(e), status=502)
+                return
             self.send_json({"success": True, "improved_content": improved})
             return
 

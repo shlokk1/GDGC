@@ -202,7 +202,8 @@ def improve_skill_content(
     failed_tests: List[Dict[str, Any]],
     use_local_llm: bool = False,
     endpoint: str = "http://localhost:11434",
-    model: str = "qwen2.5:7b"
+    model: str = "qwen2.5:7b",
+    manual_feedback: str = ""
 ) -> str:
     """
     Self-improvement loop: uses local LLM to rewrite instructions addressing failures,
@@ -215,10 +216,14 @@ def improve_skill_content(
             f"- Test: {t['name']}\n  Expected: {t.get('expected')}\n  Issue Observed: {t.get('observed')}"
             for t in failed_tests
         ) or "Improve coverage of edge cases, verification checklists, and strict sandboxing."
+        if manual_feedback:
+            failure_report += f"\n\n=== USER FEEDBACK ===\n{manual_feedback}"
         
         improved = improve_ai_skill(current_content, failure_report, endpoint=endpoint, model=model)
-        if improved and improved.strip() and improved.startswith("---"):
+        if improved and improved.strip() and improved.startswith("---") and improved != current_content:
             return improved
+        if manual_feedback:
+            raise RuntimeError("The local model did not return a revised skill. Your current draft is unchanged.")
 
     # 2. Deterministic rule-based improvement fallback
     improved = current_content

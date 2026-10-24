@@ -53,6 +53,27 @@ function showToast(message, type = 'info') {
   }, 4000);
 }
 
+function applyTheme(theme) {
+  const isLight = theme === 'light';
+  document.documentElement.dataset.theme = isLight ? 'light' : 'dark';
+  const toggle = document.getElementById('theme-toggle');
+  if (toggle) {
+    toggle.setAttribute('aria-pressed', String(isLight));
+    toggle.setAttribute('aria-label', `Switch to ${isLight ? 'dark' : 'light'} mode`);
+    toggle.querySelector('.theme-toggle-label').textContent = `${isLight ? 'Dark' : 'Light'} mode`;
+  }
+}
+
+function toggleTheme() {
+  const nextTheme = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';
+  applyTheme(nextTheme);
+  try {
+    localStorage.setItem('skillforge-theme', nextTheme);
+  } catch (err) {
+    console.warn('Could not save the theme preference:', err);
+  }
+}
+
 // --- Navigation & Router ---
 function navigateTo(pageId) {
   state.currentPage = pageId;
@@ -657,6 +678,63 @@ async function runTests() {
   }
 }
 
+async function applyManualFeedback() {
+  if (!state.skillContent) {
+    showToast('Generate or load a skill before applying feedback.', 'error');
+    return;
+  }
+
+  const feedbackInput = document.getElementById('manual-feedback-input');
+  const feedback = feedbackInput.value.trim();
+  if (!feedback) {
+    showToast('Enter feedback describing what you want improved.', 'error');
+    feedbackInput.focus();
+    return;
+  }
+  if (!state.ollama.connected) {
+    showToast('Connect to Ollama in Settings before applying feedback.', 'error');
+    return;
+  }
+
+  const btn = document.getElementById('btn-apply-feedback');
+  btn.disabled = true;
+  btn.innerText = 'Applying feedback...';
+  try {
+    const res = await fetch('/api/improve', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        skill_content: state.skillContent,
+        failed_tests: [],
+        manual_feedback: feedback,
+        use_local_llm: true,
+        endpoint: state.ollama.endpoint,
+        model: state.ollama.selectedModel
+      })
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success || !data.improved_content) {
+      throw new Error(data.error || 'The model did not return an improved skill.');
+    }
+
+    state.skillContent = data.improved_content;
+    state.validationResult = null;
+    state.testResult = null;
+    state.lastUpdated = new Date().toLocaleTimeString();
+    feedbackInput.value = '';
+    updateWorkspaceState();
+    await runValidation();
+    renderPreviewTab();
+    switchTab('preview');
+    showToast('Feedback applied. The revised skill passed through validation.', 'success');
+  } catch (err) {
+    showToast(`Could not apply feedback: ${err.message}`, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerText = 'Apply Feedback & Refine';
+  }
+}
+
 function renderTestsTab() {
   const tr = state.testResult;
   if (!tr) return;
@@ -1009,6 +1087,15 @@ function updateSidebarStatus() {
 
 // --- App Initialization ---
 document.addEventListener('DOMContentLoaded', async () => {
+  let savedTheme = 'dark';
+  try {
+    savedTheme = localStorage.getItem('skillforge-theme') || 'dark';
+  } catch (err) {
+    console.warn('Could not read the saved theme preference:', err);
+  }
+  applyTheme(savedTheme);
+  document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
+
   // Setup char counters
   const descEl = document.getElementById('input-task-desc');
   const constrEl = document.getElementById('input-constraints');

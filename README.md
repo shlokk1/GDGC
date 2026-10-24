@@ -12,6 +12,7 @@
 ## 🌟 Key Features
 
 - **🎨 UI & UX Pro Max Design**: Modern obsidian glassmorphism theme, dynamic glowing status badges, step-by-step interactive workflow progress bar, and real-time feedback.
+- **🌓 Light & Dark Themes**: Switch themes from the sidebar; your preference is remembered in the browser.
 - **⚡ Instant Presets**: 1-click prompt presets for Python Code Review, Kubernetes Manifest Auditing, and OpenAPI Documentation generation.
 - **📝 Live Skill Editor & Markdown Preview**: Edit synthesized `SKILL.md` in real-time with syntax-highlighted preview and automatic state synchronization.
 - **🔍 Structural Linter**: Deterministic validation engine checking YAML delimiters, kebab-case naming standard, description criteria, instruction body depth, and required sections.

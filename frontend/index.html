@@ -26,6 +26,16 @@
           <p class="sf-brand-sub">AI Agent Skill Builder</p>
         </div>
       </div>
+      <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Switch to light mode" aria-pressed="false">
+        <svg class="theme-icon-light" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="4"></circle>
+          <path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"></path>
+        </svg>
+        <svg class="theme-icon-dark" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M20.9 13A9 9 0 0 1 11 3.1 9 9 0 1 0 20.9 13Z"></path>
+        </svg>
+        <span class="theme-toggle-label">Light mode</span>
+      </button>
     </div>
 
     <button class="btn-new-skill" onclick="resetNewSkill()">
@@ -283,6 +293,19 @@
 
             <!-- TAB 1: PREVIEW -->
             <div id="tab-pane-preview" class="sf-tab-pane active">
+              <section class="sf-card feedback-card" aria-labelledby="manual-feedback-title">
+                <div class="sf-card-header">
+                  <h3 id="manual-feedback-title" class="sf-card-title">Manual Feedback</h3>
+                  <span class="sf-pill sf-pill-indigo">Refine with Qwen</span>
+                </div>
+                <p class="feedback-help">Tell the model what to add, remove, clarify, or change. Your current draft will be used as the starting point.</p>
+                <label class="form-label" for="manual-feedback-input">What should be improved?</label>
+                <textarea id="manual-feedback-input" class="form-control" rows="3" maxlength="2000" placeholder="For example: Add concrete reproduction steps, include expected vs. actual behavior, and make the final report easier to scan."></textarea>
+                <div class="feedback-actions">
+                  <span class="feedback-model-note">Uses the connected local model; your draft is kept if refinement fails.</span>
+                  <button id="btn-apply-feedback" class="btn-primary" type="button" onclick="applyManualFeedback()">Apply Feedback &amp; Refine</button>
+                </div>
+              </section>
               <div id="preview-container" class="preview-pane"></div>
             </div>
 

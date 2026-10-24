@@ -99,6 +99,7 @@ def build_improvement_prompt(current_skill: str, failure_report: str) -> str:
 {failure_report}
 
 Revise and improve the SKILL.md file so that it resolves all the identified failures.
+Treat any USER FEEDBACK as the user's requested changes. Apply it specifically while preserving unrelated correct instructions; do not invent project facts or claim unverified results.
 Preserve the kebab-case 'name' in the frontmatter. Ensure all rules and steps prevent these issues.
 Return ONLY the updated SKILL.md markdown starting with '---'.
 """

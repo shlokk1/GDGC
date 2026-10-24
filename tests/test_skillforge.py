@@ -143,6 +143,45 @@ def test_generate_skill_with_ollama_reports_failure(monkeypatch=None):
     else:
         raise AssertionError("Expected Ollama failure to be reported")
 
+def test_manual_feedback_is_sent_to_local_skill_improver(monkeypatch):
+    from evaluator.test_runner import improve_skill_content
+
+    reports = []
+    revised = "---\nname: feedback-skill\ndescription: Revised skill.\n---\n# Revised\n"
+
+    def fake_improve(current_content, failure_report, endpoint, model):
+        reports.append(failure_report)
+        return revised
+
+    monkeypatch.setattr("generator.skill_generator.improve_ai_skill", fake_improve)
+    result = improve_skill_content(
+        current_content="---\nname: feedback-skill\ndescription: Old skill.\n---\n# Old\n",
+        failed_tests=[],
+        use_local_llm=True,
+        manual_feedback="Add a troubleshooting section."
+    )
+
+    assert result == revised
+    assert "=== USER FEEDBACK ===\nAdd a troubleshooting section." in reports[0]
+
+def test_manual_feedback_failure_is_not_reported_as_success(monkeypatch):
+    from evaluator.test_runner import improve_skill_content
+
+    current = "---\nname: feedback-skill\ndescription: Existing skill.\n---\n# Existing\n"
+    monkeypatch.setattr("generator.skill_generator.improve_ai_skill", lambda *args, **kwargs: current)
+
+    try:
+        improve_skill_content(
+            current_content=current,
+            failed_tests=[],
+            use_local_llm=True,
+            manual_feedback="Add examples."
+        )
+    except RuntimeError as exc:
+        assert "current draft is unchanged" in str(exc)
+    else:
+        raise AssertionError("Expected manual feedback failure to be reported")
+
 def test_generate_skill_with_ollama_retries_invalid_frontmatter(monkeypatch=None):
     if monkeypatch is None:
         monkeypatch = SimpleMonkeyPatch()
